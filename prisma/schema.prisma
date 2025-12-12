@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+
+}
+
+model Product {
+  id              String      @id @default(cuid())
+  name            String
+  description     String?     @db.Text
+  pricePerSqMeter Float
+  minPrice        Float
+  isFixedPrice    Boolean     @default(false)
+  image           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  // Dimensions in meters (or user preferred unit, assuming meters for calculation base)
+  width      Float?
+  height     Float?
+  fileUrl    String?
+  finalPrice Float
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  @@index([productId])
+}
