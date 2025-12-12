@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { calculatePrice } from '@/lib/utils/price';
-// Type import might fail if Prisma client is not generated yet, but we will mock/use partial type or infer
-// import { Product } from '@prisma/client'; 
 
 // Temporary interface until we have full client generation or for props
 interface ProductData {
@@ -29,6 +27,10 @@ export default function ProductCalculator({ product, onAddToCart }: ProductCalcu
         setPrice(newPrice);
     }, [width, height, product]);
 
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    };
+
     const handleAddToCart = () => {
         if (onAddToCart) {
             onAddToCart({
@@ -38,17 +40,17 @@ export default function ProductCalculator({ product, onAddToCart }: ProductCalcu
                 finalPrice: price,
             });
         } else {
-            alert(`Added to cart: ${width}x${height}m - $${price}`);
+            alert(`Adicionado ao carrinho: ${width}x${height}m - ${formatCurrency(price)}`);
         }
     };
 
     return (
         <div className="p-6 bg-white rounded-xl shadow-md space-y-4 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">Calculate Price</h3>
+            <h3 className="text-lg font-semibold text-gray-800">Calcular Preço</h3>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Width (m)</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Largura (m)</label>
                     <input
                         type="number"
                         min="0.1"
@@ -59,7 +61,7 @@ export default function ProductCalculator({ product, onAddToCart }: ProductCalcu
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Height (m)</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Altura (m)</label>
                     <input
                         type="number"
                         min="0.1"
@@ -72,15 +74,15 @@ export default function ProductCalculator({ product, onAddToCart }: ProductCalcu
             </div>
 
             <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-gray-500">Total Price:</span>
-                <span className="text-2xl font-bold text-blue-600">${price.toFixed(2)}</span>
+                <span className="text-gray-500">Preço Total:</span>
+                <span className="text-2xl font-bold text-blue-600">{formatCurrency(price)}</span>
             </div>
 
             <div className="pt-2">
                 {/* Placeholder for File Upload */}
-                <label className="block text-sm font-medium text-gray-600 mb-2">Upload Artwork</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Enviar Arte</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-colors cursor-pointer">
-                    <span>Click to upload file</span>
+                    <span>Clique para enviar arquivo</span>
                 </div>
             </div>
 
@@ -88,7 +90,7 @@ export default function ProductCalculator({ product, onAddToCart }: ProductCalcu
                 onClick={handleAddToCart}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-95"
             >
-                Add to Cart
+                Adicionar ao Carrinho
             </button>
         </div>
     );

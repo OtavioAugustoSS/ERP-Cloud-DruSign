@@ -7,17 +7,21 @@ export default function CartSummary() {
     const totalPrice = useCartStore((state) => state.totalPrice());
     const removeItem = useCartStore((state) => state.removeItem);
 
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    };
+
     if (items.length === 0) {
         return (
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-gray-500 text-center">Your cart is empty.</p>
+                <p className="text-gray-500 text-center">Seu carrinho está vazio.</p>
             </div>
         );
     }
 
     return (
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="font-semibold text-lg mb-3">Shopping Cart</h3>
+            <h3 className="font-semibold text-lg mb-3">Carrinho de Compras</h3>
             <div className="space-y-4">
                 {items.map((item) => (
                     <div key={item.id} className="flex justify-between items-start border-b border-gray-100 pb-2 bg-gray-50/50 p-2 rounded">
@@ -28,12 +32,12 @@ export default function CartSummary() {
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="font-bold text-blue-600">${item.finalPrice.toFixed(2)}</p>
+                            <p className="font-bold text-blue-600">{formatCurrency(item.finalPrice)}</p>
                             <button
                                 onClick={() => removeItem(item.id)}
                                 className="text-xs text-red-500 hover:text-red-700 underline mt-1"
                             >
-                                Remove
+                                Remover
                             </button>
                         </div>
                     </div>
@@ -41,10 +45,10 @@ export default function CartSummary() {
             </div>
             <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between items-center">
                 <span className="font-semibold">Total:</span>
-                <span className="text-xl font-bold">${totalPrice.toFixed(2)}</span>
+                <span className="text-xl font-bold">{formatCurrency(totalPrice)}</span>
             </div>
             <button className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition-colors shadow">
-                Checkout
+                Finalizar Compra
             </button>
         </div>
     );

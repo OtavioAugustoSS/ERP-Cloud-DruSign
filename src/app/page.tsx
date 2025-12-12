@@ -7,10 +7,10 @@ import { useCartStore } from '@/store/cartStore';
 // Mock Product Data (In real app, fetch from DB or pass from Server Component wrapper)
 const DEMO_PRODUCT = {
   id: 'prod_123',
-  name: 'Custom Banner (440g)',
-  description: 'High quality vinyl banner printing. Weather resistant and durable.',
-  pricePerSqMeter: 25.00, // $25 per m2
-  minPrice: 15.00,       // Minimum $15
+  name: 'Lona Personalizada (440g)',
+  description: 'Impressão em lona vinílica de alta resistência. Ideal para banners, faixas e fachadas.',
+  pricePerSqMeter: 25.00,
+  minPrice: 15.00,
   isFixedPrice: false,
 };
 
@@ -30,7 +30,11 @@ export default function Home() {
       quantity: 1,
     });
     // Optional: simple alert for feedback since we don't have toast
-    alert('Added to cart!');
+    alert('Adicionado ao carrinho!');
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   return (
@@ -38,7 +42,7 @@ export default function Home() {
       <div className="max-w-6xl mx-auto">
         <header className="mb-10 text-center">
           <h1 className="text-4xl font-extrabold text-blue-900 mb-2">DruSign</h1>
-          <p className="text-gray-600">Web-to-Print E-Commerce Demo</p>
+          <p className="text-gray-600">E-Commerce de Impressão Digital (Web-to-Print)</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -49,7 +53,7 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-gray-800">{DEMO_PRODUCT.name}</h2>
                 <p className="text-gray-500 mt-2">{DEMO_PRODUCT.description}</p>
                 <div className="mt-4 inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-                  ${DEMO_PRODUCT.pricePerSqMeter}/m² (Min ${DEMO_PRODUCT.minPrice})
+                  {formatCurrency(DEMO_PRODUCT.pricePerSqMeter)}/m² (Mínimo {formatCurrency(DEMO_PRODUCT.minPrice)})
                 </div>
               </div>
 
