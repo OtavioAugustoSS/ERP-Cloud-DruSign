@@ -1,13 +1,19 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
     ShoppingCart,
     Settings,
     Users,
-    LogOut
+    LogOut,
+    History
 } from 'lucide-react';
 
 export default function AdminSidebar() {
+    const pathname = usePathname();
+
     return (
         <aside className="w-64 bg-surface-dark border-r border-white/5 flex flex-col shrink-0 transition-all duration-300 z-20 h-screen">
             <div className="h-16 flex items-center px-6 border-b border-white/5">
@@ -20,21 +26,26 @@ export default function AdminSidebar() {
             </div>
 
             <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-                <Link
+                <NavItem
                     href="/admin"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-primary/10 text-primary border-l-[3px] border-primary"
-                >
-                    <LayoutDashboard size={20} />
-                    Início
-                </Link>
+                    icon={LayoutDashboard}
+                    label="Início"
+                    active={pathname === '/admin'}
+                />
 
-                <Link
+                <NavItem
                     href="/admin/orders"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 text-sm font-medium transition-colors border-l-[3px] border-transparent"
-                >
-                    <ShoppingCart size={20} />
-                    Pedidos
-                </Link>
+                    icon={ShoppingCart}
+                    label="Pedidos"
+                    active={pathname === '/admin/orders' || pathname.startsWith('/admin/orders/')}
+                />
+
+                <NavItem
+                    href="/admin/history"
+                    icon={History}
+                    label="Histórico"
+                    active={pathname === '/admin/history'}
+                />
 
                 <div className="pt-4 pb-2">
                     <p className="px-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">
@@ -42,21 +53,19 @@ export default function AdminSidebar() {
                     </p>
                 </div>
 
-                <Link
+                <NavItem
                     href="/admin/settings"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 text-sm font-medium transition-colors border-l-[3px] border-transparent"
-                >
-                    <Settings size={20} />
-                    Configurações
-                </Link>
+                    icon={Settings}
+                    label="Configurações"
+                    active={pathname === '/admin/settings'}
+                />
 
-                <Link
+                <NavItem
                     href="/admin/users"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-white hover:bg-white/5 text-sm font-medium transition-colors border-l-[3px] border-transparent"
-                >
-                    <Users size={20} />
-                    Usuários
-                </Link>
+                    icon={Users}
+                    label="Usuários"
+                    active={pathname === '/admin/users'}
+                />
             </nav>
 
             <div className="p-4 border-t border-white/5">
@@ -71,5 +80,22 @@ export default function AdminSidebar() {
                 </div>
             </div>
         </aside>
+    );
+}
+
+function NavItem({ href, icon: Icon, label, active, exact }: { href: string; icon: any; label: string; active?: boolean; exact?: boolean }) {
+    return (
+        <Link
+            href={href}
+            className={`
+                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border-l-[3px]
+                ${active
+                    ? 'bg-primary/10 text-primary border-primary'
+                    : 'text-text-secondary hover:text-white hover:bg-white/5 border-transparent'}
+            `}
+        >
+            <Icon size={20} />
+            {label}
+        </Link>
     );
 }

@@ -11,6 +11,18 @@ import EditableClientName from '@/components/admin/EditableClientName';
 import { Printer } from 'lucide-react';
 import { use } from 'react';
 import { getAllProducts } from '@/actions/product';
+import { submitOrder } from '@/actions/order';
+
+// Duplicate local definition or export from SpecCard. 
+// Ideally export TAB_TO_ID from SpecCard, but for now copying map here to avoid complexity.
+const TAB_TO_ID: Record<MaterialType, string> = {
+    'LONA': 'banner-440',
+    'ADESIVO': 'adesivo-vinil',
+    'ACM': 'chapa-acm',
+    'PVC': 'chapa-pvc',
+    'PS': 'chapa-ps',
+    'ACRÍLICO': 'chapa-acrilico'
+};
 
 export default function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const unwrappedParams = use(params);
@@ -26,12 +38,12 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     const [serviceType, setServiceType] = useState<string>('Banner Promocional');
     const [finishing, setFinishing] = useState<string>('Bainha e Ilhós');
     const [thickness, setThickness] = useState<string>('2mm');
+    const [clientName, setClientName] = useState('Empresa XYZ Ltda.');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Store fetched products
     const [products, setProducts] = useState<any[]>([]);
 
-    // Fetch products on mount (since this is a client component, we use useEffect or could fetch in a parent server component)
-    // Given the structure, fetching here is easiest for now, though Server Component conversion would be ideal later.
     useEffect(() => {
         const loadProducts = async () => {
             const data = await getAllProducts();
@@ -46,8 +58,33 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     const totalPrice = unitPrice * quantity;
 
     const handleUpdateClientName = (newName: string) => {
-        // Logic to update client name via API would go here
-        console.log('Updating client name to:', newName);
+        setClientName(newName);
+        console.log('Updated client name:', newName);
+    };
+
+    const handleSendToProduction = async () => {
+        setIsSubmitting(true);
+        try {
+            const productId = TAB_TO_ID[activeTab];
+
+            await submitOrder({
+                clientName: clientName,
+                totalPrice: totalPrice,
+                items: [{
+                    productId: productId,
+                    width: width / 100, // Convert to meters
+                    height: height / 100,
+                    quantity: quantity,
+                    fileUrl: '', // Could hook into FileHandlerCard later
+                    finalPrice: unitPrice // Per item price or total? usually finalPrice is total for item line
+                }]
+            });
+            // Redirect happens in server action
+        } catch (error) {
+            console.error(error);
+            alert('Falha ao enviar pedido.');
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -63,7 +100,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="pl-1">
                         <EditableClientName
-                            initialName="Empresa XYZ Ltda."
+                            initialName={clientName}
                             onSave={handleUpdateClientName}
                         />
                     </div>
@@ -99,7 +136,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                         onServiceTypeChange={setServiceType}
                         onFinishingChange={setFinishing}
                         onThicknessChange={setThickness}
-                        products={products} // Pass fetched products
+                        products={products}
                     />
                     <FileHandlerCard />
                 </div>
@@ -116,7 +153,10 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                         finishing={finishing}
                         thickness={thickness}
                     />
-                    <OrderActionsCard />
+                    <OrderActionsCard
+                        onSendToProduction={handleSendToProduction}
+                        isSubmitting={isSubmitting}
+                    />
                 </div>
             </div>
 
