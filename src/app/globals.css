@@ -10,6 +10,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  --color-primary: #13a4ec;
+  --color-primary-hover: #0f8cc9;
+  --color-background-dark: #0f0f0f; 
+  --color-surface-dark: #1a1a1a;
+  --color-card-dark: #262626;
+  --color-input-bg: #333333;
+  --color-text-secondary: #a3a3a3;
+  
+  --shadow-glow: 0 0 15px rgba(19, 164, 236, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {

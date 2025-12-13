@@ -40,7 +40,12 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       <div className="max-w-6xl mx-auto">
-        <header className="mb-10 text-center">
+        <header className="mb-10 text-center relative">
+          <div className="absolute top-0 right-0">
+            <a href="/admin/orders/12345" className="text-sm font-medium text-blue-600 hover:underline">
+              Área Admin &rarr;
+            </a>
+          </div>
           <h1 className="text-4xl font-extrabold text-blue-900 mb-2">DruSign</h1>
           <p className="text-gray-600">E-Commerce de Impressão Digital (Web-to-Print)</p>
         </header>
