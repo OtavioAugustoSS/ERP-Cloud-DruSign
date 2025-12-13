@@ -1,26 +1,30 @@
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
-const prisma = new PrismaClient()
+console.log('Seed process started.')
+console.log('DB URL Env Status:', process.env.DATABASE_URL ? 'FOUND' : 'MISSING')
+
+// Pass explicit log options to satisfy "non-empty config" requirement if v7 enforces it,
+// and rely on process.env.DATABASE_URL for connection.
+const prisma = new PrismaClient({
+    log: ['info', 'warn', 'error']
+})
 
 async function main() {
-    console.log('Seeding database...')
+    console.log('Connecting to database via seed.js...')
 
     // Cleanup
     try {
         await prisma.orderItem.deleteMany({})
         await prisma.product.deleteMany({})
         console.log('Cleaned up old data.')
-    } catch (e) {
-        // Ignore if failing first time
-        console.log('Cleanup skipped (or failed):', e)
-    }
+    } catch (e) { console.log('Cleanup skip/error:', e.message) }
 
     // LONA
     await prisma.product.create({
         data: {
-            id: 'lona',
+            id: 'banner-440',
             name: 'Lona',
-            description: 'Lona para banners e faixas.',
+            description: 'Lona 440g para banners e faixas.',
             pricePerSqMeter: 50.00,
             minPrice: 20.00,
             isFixedPrice: false,
@@ -31,9 +35,9 @@ async function main() {
     // ADESIVO
     await prisma.product.create({
         data: {
-            id: 'adesivo',
+            id: 'adesivo-vinil',
             name: 'Adesivo',
-            description: 'Adesivo vinil para diversas aplicações.',
+            description: 'Adesivo Vinil para diversas aplicações.',
             pricePerSqMeter: 65.00,
             minPrice: 15.00,
             isFixedPrice: false,
@@ -44,7 +48,7 @@ async function main() {
     // ACM
     await prisma.product.create({
         data: {
-            id: 'acm',
+            id: 'chapa-acm',
             name: 'ACM',
             description: 'Placa de Alumínio Composto.',
             pricePerSqMeter: 120.00,
@@ -57,7 +61,7 @@ async function main() {
     // PVC
     await prisma.product.create({
         data: {
-            id: 'pvc',
+            id: 'chapa-pvc',
             name: 'PVC',
             description: 'Placa de PVC.',
             pricePerSqMeter: 120.00,
@@ -70,11 +74,11 @@ async function main() {
     // PS
     await prisma.product.create({
         data: {
-            id: 'ps',
+            id: 'chapa-ps',
             name: 'PS (Chapa)',
             description: 'Poliestireno.',
             pricePerSqMeter: 150.00,
-            minPrice: 30.00,
+            minPrice: 80.00,
             isFixedPrice: false,
             pricingConfig: {},
         },
@@ -83,13 +87,12 @@ async function main() {
     // ACRÍLICO
     await prisma.product.create({
         data: {
-            id: 'acrilico',
+            id: 'chapa-acrilico',
             name: 'Acrílico',
             description: 'Chapa de Acrílico.',
             pricePerSqMeter: 350.00,
-            minPrice: 50.00,
+            minPrice: 100.00,
             isFixedPrice: false,
-            // Store thickness pricing here
             pricingConfig: {
                 hasThickness: true,
                 thicknessOptions: ['1mm', '2mm', '3mm', '4mm', '5mm', '6mm', '8mm'],
@@ -110,11 +113,10 @@ async function main() {
 }
 
 main()
-    .then(async () => {
-        await prisma.$disconnect()
-    })
-    .catch(async (e) => {
+    .catch(e => {
         console.error(e)
-        await prisma.$disconnect()
         process.exit(1)
+    })
+    .finally(async () => {
+        await prisma.$disconnect()
     })
