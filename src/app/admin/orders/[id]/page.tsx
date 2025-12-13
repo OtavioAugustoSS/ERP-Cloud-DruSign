@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import OrderSpecsCard, { MaterialType } from '@/components/admin/OrderSpecsCard';
 import FileHandlerCard from '@/components/admin/FileHandlerCard';
@@ -10,6 +10,7 @@ import ProductionPipeline from '@/components/admin/ProductionPipeline';
 import EditableClientName from '@/components/admin/EditableClientName';
 import { Printer } from 'lucide-react';
 import { use } from 'react';
+import { getAllProducts } from '@/actions/product';
 
 export default function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const unwrappedParams = use(params);
@@ -18,12 +19,26 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     const [width, setWidth] = useState(250);
     const [height, setHeight] = useState(150);
     const [quantity, setQuantity] = useState(2);
-    const [pricePerM2, setPricePerM2] = useState(50); // This is updated by the child
+    const [pricePerM2, setPricePerM2] = useState(50);
 
     // Lifted selection state
     const [activeTab, setActiveTab] = useState<MaterialType>('LONA');
     const [serviceType, setServiceType] = useState<string>('Banner Promocional');
     const [finishing, setFinishing] = useState<string>('Bainha e Ilhós');
+    const [thickness, setThickness] = useState<string>('2mm');
+
+    // Store fetched products
+    const [products, setProducts] = useState<any[]>([]);
+
+    // Fetch products on mount (since this is a client component, we use useEffect or could fetch in a parent server component)
+    // Given the structure, fetching here is easiest for now, though Server Component conversion would be ideal later.
+    useEffect(() => {
+        const loadProducts = async () => {
+            const data = await getAllProducts();
+            if (data) setProducts(data);
+        };
+        loadProducts();
+    }, []);
 
     // Price Calculation Logic
     const areaInMeters = (width / 100) * (height / 100);
@@ -75,6 +90,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                         activeTab={activeTab}
                         serviceType={serviceType}
                         finishing={finishing}
+                        thickness={thickness}
                         onPriceChange={setPricePerM2}
                         onWidthChange={setWidth}
                         onHeightChange={setHeight}
@@ -82,6 +98,8 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                         onTabChange={setActiveTab}
                         onServiceTypeChange={setServiceType}
                         onFinishingChange={setFinishing}
+                        onThicknessChange={setThickness}
+                        products={products} // Pass fetched products
                     />
                     <FileHandlerCard />
                 </div>
@@ -96,6 +114,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                         activeTab={activeTab}
                         serviceType={serviceType}
                         finishing={finishing}
+                        thickness={thickness}
                     />
                     <OrderActionsCard />
                 </div>
