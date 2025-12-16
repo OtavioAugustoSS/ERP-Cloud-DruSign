@@ -1,24 +1,23 @@
-import { Product } from '@prisma/client';
+import { Product } from '../../types';
 
-/**
- * Calculates the price for a product based on its dimensions (width, height in meters)
- * and its configuration (pricePerSqMeter, minPrice).
- */
-export const calculatePrice = (
-  width: number,
-  height: number,
-  product: Pick<Product, 'pricePerSqMeter' | 'minPrice' | 'isFixedPrice'>
-): number => {
-  if (product.isFixedPrice || !product.pricePerSqMeter) {
-    return product.minPrice;
+export const calculatePrice = (width: number, height: number, quantity: number, product: Product | null): number => {
+  if (!product || width <= 0 || height <= 0 || quantity <= 0) {
+    return 0;
   }
 
-  const area = width * height;
-  const calculatedPrice = area * product.pricePerSqMeter;
+  // Convert dimensions from cm to meters (area in m²)
+  // width (cm) * height (cm) / 10000 = m²
+  const areaM2 = (width * height) / 10000;
 
-  // Use Math.max to ensure the price is at least the minimum price
-  // Round to 2 decimal places for currency
-  const finalPrice = Math.max(calculatedPrice, product.minPrice);
-  
-  return Number(finalPrice.toFixed(2));
+  // Base calculation
+  const total = areaM2 * product.pricePerM2 * quantity;
+
+  return parseFloat(total.toFixed(2));
+};
+
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
 };

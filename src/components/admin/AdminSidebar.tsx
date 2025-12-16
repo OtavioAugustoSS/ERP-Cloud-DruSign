@@ -20,7 +20,7 @@ export default function AdminSidebar() {
                 <span className="text-white text-xl font-bold tracking-tight">
                     Dru<span className="text-primary">Sign</span>
                 </span>
-                <span className="ml-2 text-[10px] bg-white/10 text-text-secondary px-1.5 py-0.5 rounded uppercase tracking-wider">
+                <span className="ml-2 text-[10px] bg-white/10 text-slate-400 px-1.5 py-0.5 rounded uppercase tracking-wider">
                     Admin
                 </span>
             </div>
@@ -48,7 +48,7 @@ export default function AdminSidebar() {
                 />
 
                 <div className="pt-4 pb-2">
-                    <p className="px-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                    <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                         Sistema
                     </p>
                 </div>
@@ -75,7 +75,7 @@ export default function AdminSidebar() {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-medium text-white">Admin User</span>
-                        <span className="text-xs text-text-secondary">admin@drusign.com</span>
+                        <span className="text-xs text-slate-400">admin@drusign.com</span>
                     </div>
                 </div>
             </div>
@@ -91,7 +91,7 @@ function NavItem({ href, icon: Icon, label, active, exact }: { href: string; ico
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border-l-[3px]
                 ${active
                     ? 'bg-primary/10 text-primary border-primary'
-                    : 'text-text-secondary hover:text-white hover:bg-white/5 border-transparent'}
+                    : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}
             `}
         >
             <Icon size={20} />
