@@ -39,7 +39,8 @@ import {
     Scan,
     Square,
     Link,
-    X
+    X,
+    ArrowRight
 } from 'lucide-react';
 
 export const Icons = {
@@ -82,5 +83,6 @@ export const Icons = {
     Scanner: Scan,
     Panel: Square,
     Close: X,
-    Link: Link
+    Link: Link,
+    ArrowRight: ArrowRight
 };

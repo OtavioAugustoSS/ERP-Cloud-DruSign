@@ -6,9 +6,13 @@ import { getAllProducts } from '../../actions/product';
 import { formatCurrency } from '../../lib/utils/price';
 import { submitOrder } from '../../actions/order';
 import { Product } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Dashboard() {
     // State
+    const { user } = useAuth();
+    const isEmployee = user?.role === 'employee';
+
     const [products, setProducts] = useState<Product[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('Adesivo');
     const [selectedProductId, setSelectedProductId] = useState<string>('');
@@ -304,16 +308,18 @@ export default function Dashboard() {
 
                                 <div className="p-5 md:p-8 space-y-8">
                                     {/* Client Name Input */}
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Cliente</label>
-                                        <input
-                                            type="text"
-                                            value={clientName}
-                                            onChange={(e) => setClientName(e.target.value)}
-                                            placeholder="Digite o nome do cliente..."
-                                            className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
-                                        />
-                                    </div>
+                                    {!isEmployee && (
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Cliente</label>
+                                            <input
+                                                type="text"
+                                                value={clientName}
+                                                onChange={(e) => setClientName(e.target.value)}
+                                                placeholder="Digite o nome do cliente..."
+                                                className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
+                                            />
+                                        </div>
+                                    )}
 
                                     {/* Material Selection Tabs */}
                                     <div>
@@ -487,80 +493,83 @@ export default function Dashboard() {
                             </div>
 
                             {/* Upload & Instructions Card */}
-                            <div className="rounded-3xl border border-white/10 bg-surface-dark shadow-xl overflow-hidden">
-                                <div className="p-5 border-b border-white/5 bg-black/20">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                        <Icons.Upload className="text-primary" size={24} />
-                                        Arquivos de Impressão & Instruções
-                                    </h3>
-                                </div>
-                                <div className="p-5 md:p-8 space-y-6">
-                                    {/* Drag and Drop Area */}
-                                    <div className="flex flex-col gap-4">
-                                        <div
-                                            onDragOver={handleDragOver}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={handleDrop}
-                                            className={`w-full rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer group relative overflow-hidden ${isDragging
-                                                ? 'border-primary bg-primary/10 h-40 scale-[1.02]'
-                                                : 'border-white/10 bg-black/40 hover:bg-black/60 hover:border-primary/50 h-40'
-                                                }`}
-                                        >
-                                            <div className={`absolute inset-0 bg-primary/5 transition-opacity pointer-events-none ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>
-                                            <div className={`size-14 rounded-full bg-white/5 flex items-center justify-center mb-3 transition-transform duration-300 z-10 ${isDragging ? 'scale-110 text-primary' : 'group-hover:scale-110'}`}>
-                                                <Icons.Upload className={`${isDragging ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} size={28} />
+                            {/* Upload & Instructions Card - HIDDEN FOR EMPLOYEES */}
+                            {!isEmployee && (
+                                <div className="rounded-3xl border border-white/10 bg-surface-dark shadow-xl overflow-hidden">
+                                    <div className="p-5 border-b border-white/5 bg-black/20">
+                                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                            <Icons.Upload className="text-primary" size={24} />
+                                            Arquivos de Impressão & Instruções
+                                        </h3>
+                                    </div>
+                                    <div className="p-5 md:p-8 space-y-6">
+                                        {/* Drag and Drop Area */}
+                                        <div className="flex flex-col gap-4">
+                                            <div
+                                                onDragOver={handleDragOver}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={handleDrop}
+                                                className={`w-full rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer group relative overflow-hidden ${isDragging
+                                                    ? 'border-primary bg-primary/10 h-40 scale-[1.02]'
+                                                    : 'border-white/10 bg-black/40 hover:bg-black/60 hover:border-primary/50 h-40'
+                                                    }`}
+                                            >
+                                                <div className={`absolute inset-0 bg-primary/5 transition-opacity pointer-events-none ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>
+                                                <div className={`size-14 rounded-full bg-white/5 flex items-center justify-center mb-3 transition-transform duration-300 z-10 ${isDragging ? 'scale-110 text-primary' : 'group-hover:scale-110'}`}>
+                                                    <Icons.Upload className={`${isDragging ? 'text-primary' : 'text-slate-400 group-hover:text-primary'} transition-colors`} size={28} />
+                                                </div>
+                                                <p className={`font-medium z-10 text-sm transition-colors ${isDragging ? 'text-primary' : 'text-white'}`}>
+                                                    {isDragging ? 'Solte para anexar os arquivos PDF' : 'Arraste seus arquivos PDF aqui'}
+                                                </p>
+                                                <p className="text-slate-500 text-xs z-10">ou clique para selecionar</p>
+                                                <input
+                                                    type="file"
+                                                    accept="application/pdf"
+                                                    multiple
+                                                    onChange={handleFileInput}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                                                />
                                             </div>
-                                            <p className={`font-medium z-10 text-sm transition-colors ${isDragging ? 'text-primary' : 'text-white'}`}>
-                                                {isDragging ? 'Solte para anexar os arquivos PDF' : 'Arraste seus arquivos PDF aqui'}
-                                            </p>
-                                            <p className="text-slate-500 text-xs z-10">ou clique para selecionar</p>
-                                            <input
-                                                type="file"
-                                                accept="application/pdf"
-                                                multiple
-                                                onChange={handleFileInput}
-                                                className="absolute inset-0 opacity-0 cursor-pointer z-20"
-                                            />
+
+                                            {/* File List */}
+                                            {files.length > 0 && (
+                                                <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+                                                    {files.map((file, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 group hover:border-white/20 transition-all">
+                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                <div className="size-10 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center flex-none border border-red-500/10">
+                                                                    <Icons.Description size={20} />
+                                                                </div>
+                                                                <div className="flex flex-col overflow-hidden">
+                                                                    <span className="text-sm text-white truncate font-medium">{file.name}</span>
+                                                                    <span className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB • PDF</span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => removeFile(idx)}
+                                                                className="size-8 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors"
+                                                                title="Remover arquivo"
+                                                            >
+                                                                <Icons.Trash size={16} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* File List */}
-                                        {files.length > 0 && (
-                                            <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-                                                {files.map((file, idx) => (
-                                                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 group hover:border-white/20 transition-all">
-                                                        <div className="flex items-center gap-3 overflow-hidden">
-                                                            <div className="size-10 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center flex-none border border-red-500/10">
-                                                                <Icons.Description size={20} />
-                                                            </div>
-                                                            <div className="flex flex-col overflow-hidden">
-                                                                <span className="text-sm text-white truncate font-medium">{file.name}</span>
-                                                                <span className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB • PDF</span>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => removeFile(idx)}
-                                                            className="size-8 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors"
-                                                            title="Remover arquivo"
-                                                        >
-                                                            <Icons.Trash size={16} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Instruções para Produção</label>
-                                        <textarea
-                                            value={instructions}
-                                            onChange={(e) => setInstructions(e.target.value)}
-                                            className="w-full h-24 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm p-4 focus:ring-1 focus:ring-primary transition-all outline-none resize-none placeholder-slate-600"
-                                            placeholder="Adicione observações para a equipe de produção, ex: refilar rente à imagem, atenção com pantone..."
-                                        ></textarea>
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Instruções para Produção</label>
+                                            <textarea
+                                                value={instructions}
+                                                onChange={(e) => setInstructions(e.target.value)}
+                                                className="w-full h-24 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm p-4 focus:ring-1 focus:ring-primary transition-all outline-none resize-none placeholder-slate-600"
+                                                placeholder="Adicione observações para a equipe de produção, ex: refilar rente à imagem, atenção com pantone..."
+                                            ></textarea>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Right Column: Order Summary (Sticky) */}
@@ -629,23 +638,29 @@ export default function Dashboard() {
                                         </p>
                                     </div>
 
-                                    <button
-                                        onClick={handleCreateOrder}
-                                        disabled={isSubmitting || !selectedProduct}
-                                        className={`w-full py-4 rounded-2xl font-bold text-lg shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all transform flex items-center justify-center gap-3 group ${isSubmitting || !selectedProduct
-                                            ? 'bg-gray-600 text-gray-300 cursor-not-allowed opacity-50'
-                                            : 'bg-primary hover:bg-primary-hover text-background-dark hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] hover:-translate-y-1 active:translate-y-0'
-                                            }`}
-                                    >
-                                        {isSubmitting ? (
-                                            <span>Processando...</span>
-                                        ) : (
-                                            <>
-                                                <span>Gerar Pedido</span>
-                                                <Icons.Send className="group-hover:translate-x-1 transition-transform font-bold" size={20} />
-                                            </>
-                                        )}
-                                    </button>
+                                    {!isEmployee ? (
+                                        <button
+                                            onClick={handleCreateOrder}
+                                            disabled={isSubmitting || !selectedProduct}
+                                            className={`w-full py-4 rounded-2xl font-bold text-lg shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all transform flex items-center justify-center gap-3 group ${isSubmitting || !selectedProduct
+                                                ? 'bg-gray-600 text-gray-300 cursor-not-allowed opacity-50'
+                                                : 'bg-primary hover:bg-primary-hover text-background-dark hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] hover:-translate-y-1 active:translate-y-0'
+                                                }`}
+                                        >
+                                            {isSubmitting ? (
+                                                <span>Processando...</span>
+                                            ) : (
+                                                <>
+                                                    <span>Gerar Pedido</span>
+                                                    <Icons.Send className="group-hover:translate-x-1 transition-transform font-bold" size={20} />
+                                                </>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        <div className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                                            <p className="text-slate-400 text-sm font-medium">Modo Calculadora (Sem permissão de criar pedidos)</p>
+                                        </div>
+                                    )}
 
                                     <div className="mt-4 flex items-center justify-center gap-2">
                                         <span className="size-2 rounded-full bg-green-500 animate-pulse"></span>
