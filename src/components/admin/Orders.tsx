@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Icons } from './Icons';
+import { useAuth } from '../../context/AuthContext';
 import OrderDetailsModal from './OrderDetailsModal';
 import { getPendingOrders, updateOrderStatus } from '../../actions/order';
 import { Order, OrderStatus } from '../../types';
@@ -34,8 +35,16 @@ export default function Orders() {
         refreshOrders();
     }, []);
 
+    const { user } = useAuth();
+    const isEmployee = user?.role === 'employee';
+
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
+            // Employee Security Filter: Only show "IN_PRODUCTION"
+            if (isEmployee && order.status !== OrderStatus.IN_PRODUCTION) {
+                return false;
+            }
+
             const matchesSearch =
                 order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.id.includes(searchTerm) ||
@@ -43,9 +52,11 @@ export default function Orders() {
 
             const matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
 
+            // If Employee, we ignore statusFilter dropdown effectively because we enforce IN_PRODUCTION
+            // But if they filtered for 'PENDING', they see nothing (correct).
             return matchesSearch && matchesStatus;
         });
-    }, [orders, searchTerm, statusFilter]);
+    }, [orders, searchTerm, statusFilter, isEmployee]);
 
     const handleOpenDetails = (order: Order) => {
         setSelectedOrder(order);
@@ -179,21 +190,23 @@ export default function Orders() {
                         </div>
                     </div>
 
-                    <div className="relative min-w-[200px]">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="appearance-none w-full h-12 rounded-full bg-white/5 border border-white/10 text-white pl-4 pr-10 text-sm font-medium focus:ring-1 focus:ring-primary/50 focus:border-primary/50 cursor-pointer outline-none"
-                        >
-                            <option value="ALL" className="bg-slate-900 text-white">Todos os Status</option>
-                            <option value={OrderStatus.PENDING} className="bg-slate-900 text-white">Pendente</option>
-                            <option value={OrderStatus.IN_PRODUCTION} className="bg-slate-900 text-white">Em Produção</option>
-                            <option value={OrderStatus.READY_FOR_SHIPPING} className="bg-slate-900 text-white">Pronto p/ Envio</option>
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-                            <Icons.ChevronDown size={20} />
+                    {!isEmployee && (
+                        <div className="relative min-w-[200px]">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="appearance-none w-full h-12 rounded-full bg-white/5 border border-white/10 text-white pl-4 pr-10 text-sm font-medium focus:ring-1 focus:ring-primary/50 focus:border-primary/50 cursor-pointer outline-none"
+                            >
+                                <option value="ALL" className="bg-slate-900 text-white">Todos os Status</option>
+                                <option value={OrderStatus.PENDING} className="bg-slate-900 text-white">Pendente</option>
+                                <option value={OrderStatus.IN_PRODUCTION} className="bg-slate-900 text-white">Em Produção</option>
+                                <option value={OrderStatus.READY_FOR_SHIPPING} className="bg-slate-900 text-white">Pronto p/ Envio</option>
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                                <Icons.ChevronDown size={20} />
+                            </div>
                         </div>
-                    </div>
+                    )}
                     <div className="flex gap-3 overflow-x-auto pb-1 xl:pb-0">
                         <button
                             onClick={refreshOrders}
