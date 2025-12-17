@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Icons } from './Icons';
+import OrderDetailsModal from './OrderDetailsModal';
 import { getHistoryOrders } from '../../actions/order';
 import { Order, OrderStatus } from '../../types';
 import { formatCurrency } from '../../lib/utils/price';
@@ -9,6 +10,10 @@ import { formatCurrency } from '../../lib/utils/price';
 export default function History() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Modal State
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
     // Filter States
     const [searchTerm, setSearchTerm] = useState('');
@@ -24,20 +29,16 @@ export default function History() {
         fetchHistory();
     }, []);
 
-    // Filter Logic
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             const matchesSearch =
                 order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.id.includes(searchTerm);
+                order.id.includes(searchTerm) ||
+                (order.productName && order.productName.toLowerCase().includes(searchTerm.toLowerCase()));
 
-            const matchesStatus =
-                statusFilter === 'ALL' ||
-                order.status === statusFilter;
-
-            return matchesSearch && matchesStatus;
+            return matchesSearch;
         });
-    }, [orders, searchTerm, statusFilter]);
+    }, [orders, searchTerm]);
 
     const renderStatus = (order: Order) => {
         if (order.status === OrderStatus.CANCELLED) {
@@ -56,23 +57,26 @@ export default function History() {
         );
     };
 
+    const handleOpenDetails = (order: Order) => {
+        setSelectedOrder(order);
+        setIsDetailsOpen(true);
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-dark">
+            {/* ... header ... */}
             <header className="flex-none px-8 py-6 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
+                {/* ... existing header content ... */}
                 <div className="flex flex-wrap justify-between items-end gap-4">
                     <div className="flex flex-col gap-1">
                         <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Histórico de Pedidos</h2>
                         <p className="text-slate-400 text-sm font-normal">Consulte pedidos finalizados e relatórios de vendas passadas.</p>
                     </div>
-                    <button className="flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-white/5 hover:bg-white/10 text-white border border-white/10 text-sm font-bold tracking-wide transition-all shadow-[0_0_15px_rgba(34,211,238,0.1)]">
-                        <Icons.Description size={20} />
-                        <span>Relatório Mensal</span>
-                    </button>
                 </div>
 
                 {/* Filters Toolbar */}
-                <div className="mt-8 flex flex-col xl:flex-row gap-4">
-                    <div className="flex-1 min-w-[300px]">
+                <div className="mt-6">
+                    <div className="w-full max-w-md">
                         <div className="flex w-full items-center rounded-full h-12 bg-white/5 border border-white/10 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50 transition-all overflow-hidden">
                             <div className="pl-4 text-slate-500">
                                 <Icons.Search size={20} />
@@ -84,28 +88,6 @@ export default function History() {
                                 placeholder="Buscar por Cliente ou ID..."
                             />
                         </div>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1 xl:pb-0">
-                        {/* Status Filter */}
-                        <div className="relative min-w-[160px]">
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="appearance-none w-full h-12 rounded-full bg-white/5 border border-white/10 text-white pl-4 pr-10 text-sm font-medium focus:ring-1 focus:ring-primary/50 focus:border-primary/50 cursor-pointer outline-none"
-                            >
-                                <option value="ALL">Todos os Status</option>
-                                <option value={OrderStatus.COMPLETED}>Concluído</option>
-                                <option value={OrderStatus.CANCELLED}>Cancelado</option>
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-                                <Icons.ChevronDown size={20} />
-                            </div>
-                        </div>
-
-                        <button className="flex items-center gap-2 h-12 px-5 rounded-full bg-white/5 hover:bg-white/10 text-white border border-white/10 text-sm font-bold transition-colors whitespace-nowrap">
-                            <Icons.Download size={20} />
-                            <span>CSV</span>
-                        </button>
                     </div>
                 </div>
             </header>
@@ -125,8 +107,8 @@ export default function History() {
                             <thead>
                                 <tr className="border-b border-white/10 bg-black/20 text-slate-400 text-xs uppercase tracking-wider font-semibold">
                                     <th className="p-4 pl-6 w-32">ID</th>
-                                    <th className="p-4">Cliente / Empresa</th>
-                                    <th className="p-4">Data Finalização</th>
+                                    <th className="p-4">Cliente</th>
+                                    <th className="p-4">Detalhes do Pedido</th>
                                     <th className="p-4 text-right">Valor Final</th>
                                     <th className="p-4 text-center">Status</th>
                                     <th className="p-4 pr-6 text-right">Ações</th>
@@ -140,12 +122,24 @@ export default function History() {
                                             <div className="flex flex-col">
                                                 <span className="text-white font-medium">{order.clientName}</span>
                                                 <span className="text-xs text-slate-500">
-                                                    {order.clientName.toLowerCase().replace(/\s+/g, '')}@email.com
+                                                    {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-white font-bold text-sm tracking-wide">{order.productName || (order as any).serviceType?.replace('_', ' ') || "Produto Personalizado"}</span>
+                                                <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                    <span>{order.width}x{order.height}cm</span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                                                    <span>{order.quantity}un</span>
+                                                </div>
+                                                {order.instructions && (
+                                                    <div className="mt-1 text-xs text-cyan-400/80 italic max-w-xs truncate">
+                                                        "{order.instructions}"
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className={`p-4 text-right font-mono ${order.status === OrderStatus.CANCELLED ? 'text-slate-400 line-through' : 'text-white'}`}>
                                             {formatCurrency(order.totalPrice)}
@@ -161,11 +155,12 @@ export default function History() {
                                                     </button>
                                                 ) : (
                                                     <>
-                                                        <button className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all" title="Ver Detalhes">
+                                                        <button
+                                                            onClick={() => handleOpenDetails(order)}
+                                                            className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                                                            title="Ver Detalhes"
+                                                        >
                                                             <Icons.Visibility size={18} />
-                                                        </button>
-                                                        <button className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-primary flex items-center justify-center transition-all" title="Baixar Nota Fiscal">
-                                                            <Icons.ReceiptLong size={18} />
                                                         </button>
                                                     </>
                                                 )}
@@ -191,6 +186,12 @@ export default function History() {
                     </div>
                 )}
             </div>
+
+            <OrderDetailsModal
+                isOpen={isDetailsOpen}
+                onClose={() => setIsDetailsOpen(false)}
+                order={selectedOrder}
+            />
         </div>
     );
 }

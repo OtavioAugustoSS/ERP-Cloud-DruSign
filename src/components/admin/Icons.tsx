@@ -37,7 +37,9 @@ import {
     Layers,
     Grid3X3,
     Scan,
-    Square
+    Square,
+    Link,
+    X
 } from 'lucide-react';
 
 export const Icons = {
@@ -78,5 +80,7 @@ export const Icons = {
     Layers: Layers,
     Grid: Grid3X3,
     Scanner: Scan,
-    Panel: Square
+    Panel: Square,
+    Close: X,
+    Link: Link
 };

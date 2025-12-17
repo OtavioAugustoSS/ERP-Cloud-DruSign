@@ -22,6 +22,9 @@ export default function Dashboard() {
     const [activeCategory, setActiveCategory] = useState<string>('Adesivo');
     const [selectedProductId, setSelectedProductId] = useState<string>('');
 
+    // Order Details
+    const [clientName, setClientName] = useState('');
+
     // Dimensions & Quantity
     const [width, setWidth] = useState<number>(0);
     const [height, setHeight] = useState<number>(0);
@@ -169,8 +172,9 @@ export default function Dashboard() {
         setIsSubmitting(true);
 
         // Prepare data based on conditional logic
-        let finalServiceType = 'Padrão';
-        let finalFinishing = 'Sem Acabamento';
+        // Prepare data based on conditional logic
+        let finalServiceType: string | undefined = undefined;
+        let finalFinishing: string | undefined = undefined;
         let finalInstructions = instructions;
 
         if (activeCategory === 'Lona') {
@@ -181,15 +185,20 @@ export default function Dashboard() {
             // Append thickness to instructions/details
             finalInstructions = `[Espessura: ${acrylicThickness}] ${instructions}`;
         }
+        // For Adesivo, PS, CM, we rely on the Product Name itself, no extra service type needed unless specified.
 
         if (files.length > 0) {
             const fileNames = files.map(f => f.name).join(', ');
             finalInstructions += `\n[Arquivos Anexados: ${fileNames}]`;
         }
 
+        // Generate a session-based preview URL if a file is present
+        const previewUrl = files.length > 0 ? URL.createObjectURL(files[0]) : undefined;
+
         try {
             const result = await submitOrder({
-                clientName: "Cliente Balcão",
+                clientName: clientName.trim() || "Cliente Balcão",
+                productName: (products.find(p => p.id === selectedProductId)?.name) || "Produto Personalizado",
                 width,
                 height,
                 quantity,
@@ -197,13 +206,15 @@ export default function Dashboard() {
                 totalPrice,
                 serviceType: finalServiceType,
                 finishing: finalFinishing,
-                instructions: finalInstructions
+                instructions: finalInstructions,
+                previewUrl: previewUrl
             });
 
             if (result.success) {
                 setNotification({ message: `Pedido #${result.order?.id} enviado para produção!`, type: 'success' });
                 setInstructions(''); // Clear instructions
                 setFiles([]); // Clear files
+                setClientName(''); // Clear client name
                 // Reset dimensions for next order
                 setWidth(0);
                 setHeight(0);
@@ -249,8 +260,8 @@ export default function Dashboard() {
                     {/* Notification Toast */}
                     {notification && (
                         <div className={`fixed top-24 right-8 z-50 px-6 py-4 rounded-xl shadow-2xl border backdrop-blur-md transition-all animate-bounce ${notification.type === 'success'
-                                ? 'bg-green-900/80 border-green-500/50 text-white'
-                                : 'bg-red-900/80 border-red-500/50 text-white'
+                            ? 'bg-green-900/80 border-green-500/50 text-white'
+                            : 'bg-red-900/80 border-red-500/50 text-white'
                             }`}>
                             <div className="flex items-center gap-3">
                                 {notification.type === 'success' ? <Icons.CheckCircle size={20} /> : <Icons.Alert size={20} />}
@@ -274,6 +285,18 @@ export default function Dashboard() {
                                 </div>
 
                                 <div className="p-5 md:p-8 space-y-8">
+                                    {/* Client Name Input */}
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Cliente</label>
+                                        <input
+                                            type="text"
+                                            value={clientName}
+                                            onChange={(e) => setClientName(e.target.value)}
+                                            placeholder="Digite o nome do cliente..."
+                                            className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
+                                        />
+                                    </div>
+
                                     {/* Material Selection Tabs */}
                                     <div>
                                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Selecione o Material</label>
@@ -283,8 +306,8 @@ export default function Dashboard() {
                                                     key={tab.dataKey}
                                                     onClick={() => handleCategoryChange(tab.dataKey)}
                                                     className={`px-5 py-2.5 rounded-full text-sm font-bold tracking-wide uppercase transition-all shadow-lg ${activeCategory === tab.dataKey
-                                                            ? 'bg-primary text-background-dark shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-105'
-                                                            : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white'
+                                                        ? 'bg-primary text-background-dark shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-105'
+                                                        : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white'
                                                         }`}
                                                 >
                                                     {tab.label}
@@ -310,9 +333,9 @@ export default function Dashboard() {
                                                             className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                         >
                                                             {categoryProducts.map(p => (
-                                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                                                <option key={p.id} value={p.id} className="bg-slate-900 text-white">{p.name}</option>
                                                             ))}
-                                                            {categoryProducts.length === 0 && <option disabled>Sem produtos nesta categoria</option>}
+                                                            {categoryProducts.length === 0 && <option disabled className="bg-slate-900 text-white">Sem produtos nesta categoria</option>}
                                                         </select>
                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                             <Icons.ChevronDown size={18} />
@@ -334,8 +357,8 @@ export default function Dashboard() {
                                                                 onChange={(e) => setLonaServiceType(e.target.value)}
                                                                 className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                             >
-                                                                <option value="Banner Promocional">Banner Promocional</option>
-                                                                <option value="Grandes Formatos">Grandes Formatos</option>
+                                                                <option value="Banner Promocional" className="bg-slate-900 text-white">Banner Promocional</option>
+                                                                <option value="Grandes Formatos" className="bg-slate-900 text-white">Grandes Formatos</option>
                                                             </select>
                                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                                 <Icons.ChevronDown size={18} />
@@ -350,9 +373,9 @@ export default function Dashboard() {
                                                                 onChange={(e) => setLonaFinishing(e.target.value)}
                                                                 className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                             >
-                                                                <option value="Bainha e Ilhós">Bainha e Ilhós</option>
-                                                                <option value="Bastão e Corda">Bastão e Corda</option>
-                                                                <option value="Sem Acabamento">Sem Acabamento</option>
+                                                                <option value="Bainha e Ilhós" className="bg-slate-900 text-white">Bainha e Ilhós</option>
+                                                                <option value="Bastão e Corda" className="bg-slate-900 text-white">Bastão e Corda</option>
+                                                                <option value="Sem Acabamento" className="bg-slate-900 text-white">Sem Acabamento</option>
                                                             </select>
                                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                                 <Icons.ChevronDown size={18} />
@@ -372,14 +395,14 @@ export default function Dashboard() {
                                                             onChange={(e) => setAcrylicThickness(e.target.value)}
                                                             className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                         >
-                                                            <option value="1mm">1mm</option>
-                                                            <option value="2mm">2mm</option>
-                                                            <option value="3mm">3mm</option>
-                                                            <option value="4mm">4mm</option>
-                                                            <option value="5mm">5mm</option>
-                                                            <option value="6mm">6mm</option>
-                                                            <option value="8mm">8mm</option>
-                                                            <option value="10mm">10mm</option>
+                                                            <option value="1mm" className="bg-slate-900 text-white">1mm</option>
+                                                            <option value="2mm" className="bg-slate-900 text-white">2mm</option>
+                                                            <option value="3mm" className="bg-slate-900 text-white">3mm</option>
+                                                            <option value="4mm" className="bg-slate-900 text-white">4mm</option>
+                                                            <option value="5mm" className="bg-slate-900 text-white">5mm</option>
+                                                            <option value="6mm" className="bg-slate-900 text-white">6mm</option>
+                                                            <option value="8mm" className="bg-slate-900 text-white">8mm</option>
+                                                            <option value="10mm" className="bg-slate-900 text-white">10mm</option>
                                                         </select>
                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                             <Icons.ChevronDown size={18} />
@@ -458,8 +481,8 @@ export default function Dashboard() {
                                             onDragLeave={handleDragLeave}
                                             onDrop={handleDrop}
                                             className={`w-full rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer group relative overflow-hidden ${isDragging
-                                                    ? 'border-primary bg-primary/10 h-40 scale-[1.02]'
-                                                    : 'border-white/10 bg-black/40 hover:bg-black/60 hover:border-primary/50 h-40'
+                                                ? 'border-primary bg-primary/10 h-40 scale-[1.02]'
+                                                : 'border-white/10 bg-black/40 hover:bg-black/60 hover:border-primary/50 h-40'
                                                 }`}
                                         >
                                             <div className={`absolute inset-0 bg-primary/5 transition-opacity pointer-events-none ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>
@@ -589,8 +612,8 @@ export default function Dashboard() {
                                         onClick={handleCreateOrder}
                                         disabled={isSubmitting || !selectedProduct}
                                         className={`w-full py-4 rounded-2xl font-bold text-lg shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all transform flex items-center justify-center gap-3 group ${isSubmitting || !selectedProduct
-                                                ? 'bg-gray-600 text-gray-300 cursor-not-allowed opacity-50'
-                                                : 'bg-primary hover:bg-primary-hover text-background-dark hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] hover:-translate-y-1 active:translate-y-0'
+                                            ? 'bg-gray-600 text-gray-300 cursor-not-allowed opacity-50'
+                                            : 'bg-primary hover:bg-primary-hover text-background-dark hover:shadow-[0_0_40px_rgba(34,211,238,0.6)] hover:-translate-y-1 active:translate-y-0'
                                             }`}
                                     >
                                         {isSubmitting ? (

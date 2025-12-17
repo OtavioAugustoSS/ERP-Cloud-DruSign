@@ -15,14 +15,16 @@ export enum OrderStatus {
 
 export interface OrderInput {
     clientName: string;
+    productName: string;
     width: number;
     height: number;
     quantity: number;
     productId: string;
     totalPrice: number;
-    serviceType: string;
-    finishing: string;
+    serviceType?: string;
+    finishing?: string;
     instructions: string;
+    previewUrl?: string;
 }
 
 export interface Order extends OrderInput {
