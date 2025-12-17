@@ -7,15 +7,6 @@ import { formatCurrency } from '../../lib/utils/price';
 import { submitOrder } from '../../actions/order';
 import { Product } from '../../types';
 
-const CATEGORY_TABS = [
-    { label: 'ADESIVO', dataKey: 'Adesivo' },
-    { label: 'LONA', dataKey: 'Lona' },
-    { label: 'ACM', dataKey: 'ACM' },
-    { label: 'ACRÍLICO', dataKey: 'Acrílico' },
-    { label: 'CHAPA PS', dataKey: 'PS' },
-    { label: 'PVC', dataKey: 'PVC' },
-];
-
 export default function Dashboard() {
     // State
     const [products, setProducts] = useState<Product[]>([]);
@@ -49,17 +40,44 @@ export default function Dashboard() {
         const fetchProducts = async () => {
             const data = await getAllProducts();
             setProducts(data);
+
             // Ensure we have a selection on load if data exists
-            const initialCategoryProducts = data.filter(p => p.category === 'Adesivo');
-            if (initialCategoryProducts.length > 0) {
-                setSelectedProductId(initialCategoryProducts[0].id);
-            } else if (data.length > 0) {
-                setActiveCategory(data[0].category);
-                setSelectedProductId(data[0].id);
+            if (data.length > 0) {
+                // Try to keep current category if possible, else default to first
+                // For initial load, we perform this logic
+                const initialCategoryProducts = data.filter(p => p.category === 'Adesivo');
+                if (initialCategoryProducts.length > 0) {
+                    setSelectedProductId(initialCategoryProducts[0].id);
+                    setActiveCategory('Adesivo');
+                } else {
+                    setActiveCategory(data[0].category);
+                    setSelectedProductId(data[0].id);
+                }
             }
         };
         fetchProducts();
     }, []);
+
+    // Derived Categories
+    const categoryTabs = useMemo(() => {
+        const categories = Array.from(new Set(products.map(p => p.category)));
+        // Optional: define a preferred order or sort alphabetically
+        // We can force specific ones to start if they exist
+        const preferredOrder = ['Adesivo', 'Lona', 'ACM', 'Acrílico', 'PS', 'PVC'];
+
+        return categories.sort((a, b) => {
+            const indexA = preferredOrder.indexOf(a);
+            const indexB = preferredOrder.indexOf(b);
+
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return a.localeCompare(b);
+        }).map(cat => ({
+            label: cat.toUpperCase(),
+            dataKey: cat
+        }));
+    }, [products]);
 
     // Filter products based on active category
     const categoryProducts = useMemo(() => {
@@ -301,18 +319,20 @@ export default function Dashboard() {
                                     <div>
                                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Selecione o Material</label>
                                         <div className="flex flex-wrap gap-2">
-                                            {CATEGORY_TABS.map(tab => (
-                                                <button
-                                                    key={tab.dataKey}
-                                                    onClick={() => handleCategoryChange(tab.dataKey)}
-                                                    className={`px-5 py-2.5 rounded-full text-sm font-bold tracking-wide uppercase transition-all shadow-lg ${activeCategory === tab.dataKey
-                                                        ? 'bg-primary text-background-dark shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-105'
-                                                        : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {tab.label}
-                                                </button>
-                                            ))}
+                                            <div className="flex flex-wrap gap-2">
+                                                {categoryTabs.map(tab => (
+                                                    <button
+                                                        key={tab.dataKey}
+                                                        onClick={() => handleCategoryChange(tab.dataKey)}
+                                                        className={`px-5 py-2.5 rounded-full text-sm font-bold tracking-wide uppercase transition-all shadow-lg ${activeCategory === tab.dataKey
+                                                            ? 'bg-primary text-background-dark shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-105'
+                                                            : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        {tab.label}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -395,14 +415,15 @@ export default function Dashboard() {
                                                             onChange={(e) => setAcrylicThickness(e.target.value)}
                                                             className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                         >
-                                                            <option value="1mm" className="bg-slate-900 text-white">1mm</option>
-                                                            <option value="2mm" className="bg-slate-900 text-white">2mm</option>
-                                                            <option value="3mm" className="bg-slate-900 text-white">3mm</option>
-                                                            <option value="4mm" className="bg-slate-900 text-white">4mm</option>
-                                                            <option value="5mm" className="bg-slate-900 text-white">5mm</option>
-                                                            <option value="6mm" className="bg-slate-900 text-white">6mm</option>
-                                                            <option value="8mm" className="bg-slate-900 text-white">8mm</option>
-                                                            <option value="10mm" className="bg-slate-900 text-white">10mm</option>
+                                                            {categoryProducts
+                                                                .map(p => p.name.replace('Acrílico ', ''))
+                                                                .sort((a, b) => parseInt(a) - parseInt(b))
+                                                                .map(thickness => (
+                                                                    <option key={thickness} value={thickness} className="bg-slate-900 text-white">
+                                                                        {thickness}
+                                                                    </option>
+                                                                ))}
+                                                            {categoryProducts.length === 0 && <option disabled className="bg-slate-900 text-white">Sem espessuras disponíveis</option>}
                                                         </select>
                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                             <Icons.ChevronDown size={18} />

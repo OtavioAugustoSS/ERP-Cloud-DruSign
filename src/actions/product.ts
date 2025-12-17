@@ -44,3 +44,30 @@ export const updateProductPricing = async (id: string, newPrice: number): Promis
 
     return { success: false };
 };
+
+export const createProduct = async (data: Omit<Product, 'id'>): Promise<{ success: boolean; product?: Product }> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const newProduct: Product = {
+        id: `prod-${Date.now()}`,
+        ...data
+    };
+
+    MOCK_PRODUCTS.push(newProduct);
+    console.log(`Created product: ${newProduct.name} in ${newProduct.category}`);
+
+    return { success: true, product: newProduct };
+};
+
+export const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const index = MOCK_PRODUCTS.findIndex(p => p.id === id);
+    if (index !== -1) {
+        const deleted = MOCK_PRODUCTS.splice(index, 1);
+        console.log(`Deleted product: ${deleted[0].name}`);
+        return { success: true };
+    }
+
+    return { success: false, error: 'Produto não encontrado' };
+};
