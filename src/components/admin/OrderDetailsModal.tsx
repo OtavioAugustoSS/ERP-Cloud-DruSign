@@ -4,6 +4,7 @@ import React from 'react';
 import { Icons } from './Icons';
 import { Order, OrderStatus } from '../../types';
 import { formatCurrency } from '../../lib/utils/price';
+import { useAuth } from '../../context/AuthContext';
 
 interface OrderDetailsModalProps {
     isOpen: boolean;
@@ -12,6 +13,9 @@ interface OrderDetailsModalProps {
 }
 
 export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
+    const { user } = useAuth();
+    const isEmployee = user?.role === 'employee';
+
     if (!isOpen || !order) return null;
 
     const formatStatus = (status: OrderStatus) => {
@@ -157,10 +161,12 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                     >
                         Fechar
                     </button>
-                    <button className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
-                        <Icons.Print size={18} />
-                        Imprimir Ordem
-                    </button>
+                    {!isEmployee && (
+                        <button className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+                            <Icons.Print size={18} />
+                            Imprimir Ordem
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

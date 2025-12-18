@@ -145,86 +145,98 @@ export default function Settings() {
             </header>
 
             <div className="flex-1 overflow-auto p-8 pt-6">
-                <div className="max-w-6xl mx-auto flex flex-col gap-6">
-                    <div className="w-full rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-2xl">
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
-                            <h3 className="text-white text-lg font-bold">Preço por m²</h3>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-400 mr-2">Última atualização: Hoje, 10:42</span>
-                                <button
-                                    onClick={() => setIsAddModalOpen(true)}
-                                    className="size-8 rounded-full hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
-                                    title="Adicionar Novo Material"
-                                >
-                                    <Icons.Plus size={18} />
-                                </button>
-                            </div>
+                <div className="max-w-6xl mx-auto flex flex-col gap-8">
+
+                    {/* Header Info */}
+                    <div className="flex justify-between items-center bg-surface-dark/50 p-6 rounded-2xl border border-white/5 shadow-2xl">
+                        <div>
+                            <h3 className="text-white text-lg font-bold">Gerenciamento de Materiais</h3>
+                            <p className="text-slate-400 text-sm mt-1">
+                                Adicione, remova ou atualize os preços de venda.
+                                <br />
+                                <span className="text-xs opacity-70">Alterações refletem imediatamente na calculadora.</span>
+                            </p>
                         </div>
-                        {loading ? (
-                            <div className="p-12 text-center text-slate-400">Carregando tabela de preços...</div>
-                        ) : (
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-white/10 bg-black/20 text-slate-400 text-xs uppercase tracking-wider font-semibold">
-                                        <th className="p-4 pl-6">Material</th>
-                                        <th className="p-4">Tipo</th>
-                                        <th className="p-4 text-right w-40">Preço Venda (m²)</th>
-                                        <th className="p-4 pr-6 w-16"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5 text-sm text-slate-300">
-                                    {products.map((product) => (
-                                        <tr key={product.id} className="hover:bg-white/[0.02] transition-colors group">
-                                            <td className="p-4 pl-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="size-8 rounded bg-white/5 flex items-center justify-center border border-white/10">
-                                                        {getProductIcon(product.category)}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-white font-medium">{product.name}</span>
-                                                        <span className="text-xs text-slate-500">{product.category}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-4"><span className="px-2 py-1 rounded-md bg-white/10 text-xs text-slate-400">{product.category}</span></td>
-                                            <td className="p-4 text-right">
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
-                                                    <input
-                                                        className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none ${savingId === product.id ? 'opacity-50' : ''} ${editingValues[product.id] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
-                                                        type="text" // using text to allow comma typing
-                                                        value={editingValues[product.id] !== undefined ? editingValues[product.id] : product.pricePerM2.toFixed(2)}
-                                                        onChange={(e) => handlePriceChange(product.id, e.target.value)}
-                                                        onBlur={() => handlePriceBlur(product.id)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.currentTarget.blur();
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="p-4 pr-6 text-center">
-                                                <button
-                                                    onClick={() => handleDeleteProduct(product.id)}
-                                                    className="text-slate-500 hover:text-red-400 transition-colors"
-                                                >
-                                                    <Icons.Trash size={18} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2 group"
+                        >
+                            <Icons.Plus size={20} className="group-hover:rotate-90 transition-transform" />
+                            Adicionar Novo Material
+                        </button>
                     </div>
 
-                    <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex gap-4 items-center">
-                        <Icons.Alert className="text-yellow-500 flex-none" size={20} />
-                        <div>
-                            <p className="text-slate-400 text-sm">Alterações salvas aqui impactarão imediatamente o calculador de preços no site. Pedidos em rascunho serão recalculados automaticamente.</p>
+                    {loading ? (
+                        <div className="p-12 text-center text-slate-400">Carregando tabela de preços...</div>
+                    ) : (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {uniqueCategories.sort().map(category => {
+                                const categoryProducts = products.filter(p => p.category === category);
+                                if (categoryProducts.length === 0) return null;
+
+                                return (
+                                    <div key={category} className="rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-xl">
+                                        <div className="p-4 border-b border-white/5 bg-black/20 flex items-center gap-3">
+                                            <div className="size-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 text-primary">
+                                                {getProductIcon(category)}
+                                            </div>
+                                            <h4 className="text-white font-bold text-lg">{category}</h4>
+                                            <span className="px-2 py-0.5 rounded-full bg-white/5 text-xs text-slate-400 font-mono">
+                                                {categoryProducts.length} itens
+                                            </span>
+                                        </div>
+
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-white/10 bg-black/10 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                                                    <th className="p-4 pl-6 w-1/2">Material (Subtipo)</th>
+                                                    <th className="p-4 text-right w-40">Preço Venda (m²)</th>
+                                                    <th className="p-4 pr-6 w-16"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5 text-sm text-slate-300">
+                                                {categoryProducts.map((product) => (
+                                                    <tr key={product.id} className="hover:bg-white/[0.02] transition-colors group">
+                                                        <td className="p-4 pl-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-white font-medium">{product.name}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <div className="relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
+                                                                <input
+                                                                    className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none ${savingId === product.id ? 'opacity-50' : ''} ${editingValues[product.id] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
+                                                                    type="text"
+                                                                    value={editingValues[product.id] !== undefined ? editingValues[product.id] : product.pricePerM2.toFixed(2)}
+                                                                    onChange={(e) => handlePriceChange(product.id, e.target.value)}
+                                                                    onBlur={() => handlePriceBlur(product.id)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.currentTarget.blur();
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-4 pr-6 text-center">
+                                                            <button
+                                                                onClick={() => handleDeleteProduct(product.id)}
+                                                                className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                                title="Excluir Material"
+                                                            >
+                                                                <Icons.Trash size={18} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 

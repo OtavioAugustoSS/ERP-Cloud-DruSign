@@ -163,10 +163,12 @@ export default function Orders() {
                         <p className="text-slate-400 text-sm font-normal">Acompanhe e gerencie o fluxo de pedidos ativos.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/5 border border-yellow-500/10 text-xs text-yellow-500">
-                            <span className="size-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                            {orders.filter(o => o.status === OrderStatus.PENDING).length} Pendentes
-                        </div>
+                        {!isEmployee && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/5 border border-yellow-500/10 text-xs text-yellow-500">
+                                <span className="size-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                                {orders.filter(o => o.status === OrderStatus.PENDING).length} Pendentes
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/5 border border-blue-500/10 text-xs text-blue-500">
                             <span className="size-2 rounded-full bg-blue-500"></span>
                             {orders.filter(o => o.status === OrderStatus.IN_PRODUCTION).length} Em Prod.
