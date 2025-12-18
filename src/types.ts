@@ -15,6 +15,7 @@ export enum OrderStatus {
 
 export interface OrderInput {
     clientName: string;
+    clientPhone?: string;
     productName: string;
     width: number;
     height: number;

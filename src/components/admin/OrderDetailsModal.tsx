@@ -76,6 +76,12 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                             <div>
                                 <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Cliente</label>
                                 <div className="text-lg text-white font-medium">{order.clientName}</div>
+                                {order.clientPhone && (
+                                    <div className="flex items-center gap-2 text-sm text-cyan-400 mt-1">
+                                        <Icons.Phone size={14} />
+                                        <span>{order.clientPhone}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div>

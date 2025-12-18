@@ -40,7 +40,8 @@ import {
     Square,
     Link,
     X,
-    ArrowRight
+    ArrowRight,
+    Phone
 } from 'lucide-react';
 
 export const Icons = {
@@ -84,5 +85,6 @@ export const Icons = {
     Panel: Square,
     Close: X,
     Link: Link,
-    ArrowRight: ArrowRight
+    ArrowRight: ArrowRight,
+    Phone: Phone
 };

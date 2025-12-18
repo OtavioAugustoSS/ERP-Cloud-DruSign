@@ -19,6 +19,7 @@ export default function Dashboard() {
 
     // Order Details
     const [clientName, setClientName] = useState('');
+    const [clientPhone, setClientPhone] = useState('');
 
     // Dimensions & Quantity
     const [width, setWidth] = useState<number>(0);
@@ -174,6 +175,28 @@ export default function Dashboard() {
         }
     };
 
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, ''); // Remove non-numbers
+        if (value.length > 11) value = value.slice(0, 11); // Limit to 11 digits
+
+        // Apply Mask
+        if (value.length > 10) {
+            // (XX) XXXXX-XXXX
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            // (XX) XXXX-XXXX (Partial)
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            // (XX) XXXX (Partial)
+            value = value.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+        } else if (value.length > 0) {
+            // (XX (Partial)
+            value = value.replace(/^(\d{0,2})/, '($1');
+        }
+
+        setClientPhone(value);
+    };
+
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const selectedFiles = Array.from(e.target.files).filter(
@@ -218,9 +241,10 @@ export default function Dashboard() {
         const previewUrl = files.length > 0 ? URL.createObjectURL(files[0]) : undefined;
 
         try {
-            const result = await submitOrder({
-                clientName: clientName.trim() || "Cliente Balcão",
-                productName: (products.find(p => p.id === selectedProductId)?.name) || "Produto Personalizado",
+            const orderData: OrderInput = {
+                clientName: isEmployee ? 'Cliente Balcão' : clientName, // Fallback for employee view
+                clientPhone: isEmployee ? undefined : clientPhone,
+                productName: selectedProduct?.name || 'Produto Personalizado',
                 width,
                 height,
                 quantity,
@@ -230,7 +254,9 @@ export default function Dashboard() {
                 finishing: finalFinishing,
                 instructions: finalInstructions,
                 previewUrl: previewUrl
-            });
+            };
+
+            const result = await submitOrder(orderData);
 
             if (result.success) {
                 setNotification({ message: `Pedido #${result.order?.id} enviado para produção!`, type: 'success' });
@@ -307,17 +333,30 @@ export default function Dashboard() {
                                 </div>
 
                                 <div className="p-5 md:p-8 space-y-8">
-                                    {/* Client Name Input */}
+                                    {/* Client Name & Phone Input (Admin Only) */}
                                     {!isEmployee && (
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Cliente</label>
-                                            <input
-                                                type="text"
-                                                value={clientName}
-                                                onChange={(e) => setClientName(e.target.value)}
-                                                placeholder="Digite o nome do cliente..."
-                                                className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
-                                            />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="flex-1">
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Cliente</label>
+                                                <input
+                                                    type="text"
+                                                    value={clientName}
+                                                    onChange={(e) => setClientName(e.target.value)}
+                                                    placeholder="Digite o nome do cliente..."
+                                                    className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Telefone / Contato</label>
+                                                <input
+                                                    type="text"
+                                                    value={clientPhone}
+                                                    onChange={handlePhoneChange}
+                                                    placeholder="(00) 00000-0000"
+                                                    maxLength={15} // (11) 91234-5678 = 15 chars
+                                                    className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
+                                                />
+                                            </div>
                                         </div>
                                     )}
 
