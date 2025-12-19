@@ -20,6 +20,7 @@ export default function Dashboard() {
     // Order Details
     const [clientName, setClientName] = useState('');
     const [clientPhone, setClientPhone] = useState('');
+    const [clientDocument, setClientDocument] = useState('');
 
     // Dimensions & Quantity
     const [width, setWidth] = useState<number>(0);
@@ -197,6 +198,40 @@ export default function Dashboard() {
         setClientPhone(value);
     };
 
+    const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, ''); // Remove non-numbers
+        if (value.length > 14) value = value.slice(0, 14); // Limit to 14 digits (CNPJ)
+
+        // Apply Mask
+        if (value.length > 11) {
+            // CNPJ: XX.XXX.XXX/XXXX-XX
+            value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, '$1.$2.$3/$4-$5');
+        } else if (value.length > 8) {
+            // CNPJ Partial or CPF: XXX.XXX.XXX-XX
+            // Wait, we need to decide when to switch. 
+            // Often logic is: if length <= 11 use CPF mask, else use CNPJ.
+            // But while typing, it's ambiguous.
+            // Let's use standard progressive masking.
+        }
+
+        // Simpler approach for dual mask that works while typing:
+        if (value.length <= 11) {
+            // CPF: XXX.XXX.XXX-XX
+            value = value.replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+                .replace(/(-\d{2})\d+?$/, '$1'); // Capture only the first valid match
+        } else {
+            // CNPJ: XX.XXX.XXX/XXXX-XX
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+
+        setClientDocument(value);
+    };
+
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const selectedFiles = Array.from(e.target.files).filter(
@@ -227,23 +262,23 @@ export default function Dashboard() {
             finalFinishing = lonaFinishing;
         } else if (activeCategory === 'Acrílico') {
             finalServiceType = 'Corte Router/Laser';
-            // Append thickness to instructions/details
-            finalInstructions = `[Espessura: ${acrylicThickness}] ${instructions}`;
+            // Save thickness in finishing instead of instructions
+            finalFinishing = `Espessura: ${acrylicThickness}`;
         }
         // For Adesivo, PS, CM, we rely on the Product Name itself, no extra service type needed unless specified.
 
-        if (files.length > 0) {
-            const fileNames = files.map(f => f.name).join(', ');
-            finalInstructions += `\n[Arquivos Anexados: ${fileNames}]`;
-        }
+        // Files are handled via previewUrls, no need to append names to instructions.
 
         // Generate a session-based preview URL if a file is present
         const previewUrl = files.length > 0 ? URL.createObjectURL(files[0]) : undefined;
+        // Generate URLs for all files
+        const previewUrls = files.length > 0 ? files.map(f => URL.createObjectURL(f)) : undefined;
 
         try {
             const orderData: OrderInput = {
                 clientName: isEmployee ? 'Cliente Balcão' : clientName, // Fallback for employee view
                 clientPhone: isEmployee ? undefined : clientPhone,
+                clientDocument: isEmployee ? undefined : clientDocument,
                 productName: selectedProduct?.name || 'Produto Personalizado',
                 width,
                 height,
@@ -253,7 +288,8 @@ export default function Dashboard() {
                 serviceType: finalServiceType,
                 finishing: finalFinishing,
                 instructions: finalInstructions,
-                previewUrl: previewUrl
+                previewUrl: previewUrl,
+                previewUrls: previewUrls
             };
 
             const result = await submitOrder(orderData);
@@ -263,6 +299,8 @@ export default function Dashboard() {
                 setInstructions(''); // Clear instructions
                 setFiles([]); // Clear files
                 setClientName(''); // Clear client name
+                setClientPhone(''); // Clear client phone
+                setClientDocument(''); // Clear client document
                 // Reset dimensions for next order
                 setWidth(0);
                 setHeight(0);
@@ -333,27 +371,38 @@ export default function Dashboard() {
                                 </div>
 
                                 <div className="p-5 md:p-8 space-y-8">
-                                    {/* Client Name & Phone Input (Admin Only) */}
+                                    {/* Client Name, Phone, Document (Admin Only) */}
                                     {!isEmployee && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="flex-1">
                                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Cliente</label>
                                                 <input
                                                     type="text"
                                                     value={clientName}
                                                     onChange={(e) => setClientName(e.target.value)}
-                                                    placeholder="Digite o nome do cliente..."
+                                                    placeholder="Nome do cliente..."
                                                     className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
                                                 />
                                             </div>
                                             <div className="flex-1">
-                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Telefone / Contato</label>
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Telefone</label>
                                                 <input
                                                     type="text"
                                                     value={clientPhone}
                                                     onChange={handlePhoneChange}
                                                     placeholder="(00) 00000-0000"
-                                                    maxLength={15} // (11) 91234-5678 = 15 chars
+                                                    maxLength={15}
+                                                    className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">CPF / CNPJ</label>
+                                                <input
+                                                    type="text"
+                                                    value={clientDocument}
+                                                    onChange={handleDocumentChange}
+                                                    placeholder="000.000.000-00"
+                                                    maxLength={18} // CNPJ formatted length
                                                     className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
                                                 />
                                             </div>

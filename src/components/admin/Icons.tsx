@@ -41,7 +41,8 @@ import {
     Link,
     X,
     ArrowRight,
-    Phone
+    Phone,
+    IdCard
 } from 'lucide-react';
 
 export const Icons = {
@@ -86,5 +87,6 @@ export const Icons = {
     Close: X,
     Link: Link,
     ArrowRight: ArrowRight,
-    Phone: Phone
+    Phone: Phone,
+    IdCard: IdCard
 };

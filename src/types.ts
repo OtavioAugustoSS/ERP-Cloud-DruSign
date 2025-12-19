@@ -16,6 +16,7 @@ export enum OrderStatus {
 export interface OrderInput {
     clientName: string;
     clientPhone?: string;
+    clientDocument?: string;
     productName: string;
     width: number;
     height: number;
@@ -26,6 +27,7 @@ export interface OrderInput {
     finishing?: string;
     instructions: string;
     previewUrl?: string;
+    previewUrls?: string[];
 }
 
 export interface Order extends OrderInput {
@@ -33,4 +35,5 @@ export interface Order extends OrderInput {
     status: OrderStatus;
     createdAt: Date;
     previewUrl?: string; // Optional for the mock UI
+    previewUrls?: string[];
 }

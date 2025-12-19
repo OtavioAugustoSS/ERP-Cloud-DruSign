@@ -82,6 +82,12 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                                         <span>{order.clientPhone}</span>
                                     </div>
                                 )}
+                                {order.clientDocument && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
+                                        <Icons.IdCard size={14} />
+                                        <span>{order.clientDocument}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -142,8 +148,33 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                         </div>
                     </div>
 
-                    {/* Preview Link (if available) */}
-                    {order.previewUrl && (
+                    {/* Abstracted Preview Section */}
+                    {(order.previewUrls && order.previewUrls.length > 0) ? (
+                        <div className="pt-4 border-t border-white/5">
+                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3 block">
+                                Arquivos Anexados ({order.previewUrls.length})
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {order.previewUrls.map((url, index) => (
+                                    <a
+                                        key={index}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-400 border border-cyan-500/10 transition-all text-sm font-medium group"
+                                    >
+                                        <div className="p-2 bg-cyan-500/10 rounded-lg group-hover:bg-cyan-500/20 transition-colors">
+                                            <Icons.Description size={18} />
+                                        </div>
+                                        <div className="flex-1 truncate">
+                                            Arquivo {index + 1}
+                                        </div>
+                                        <Icons.Download size={16} className="opacity-50 group-hover:opacity-100" />
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    ) : order.previewUrl && (
                         <div className="pt-4 border-t border-white/5">
                             <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3 block">Arquivos / Preview</label>
                             <a
@@ -152,8 +183,8 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 border border-cyan-500/20 transition-all text-sm font-bold shadow-[0_0_15px_rgba(34,211,238,0.1)] hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
                             >
-                                <Icons.Link size={18} />
-                                Abrir Arquivo / Visualizar PDF
+                                <Icons.Download size={18} />
+                                Baixar / Visualizar Arquivo
                             </a>
                         </div>
                     )}

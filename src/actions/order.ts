@@ -18,7 +18,8 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
         id: Math.floor(Math.random() * 9000 + 1000).toString(), // Simple 4 digit ID
         status: OrderStatus.PENDING,
         createdAt: new Date(),
-        previewUrl: orderData.previewUrl || undefined // Use provided URL or undefined
+        previewUrl: orderData.previewUrl || undefined, // Use provided URL or undefined
+        previewUrls: orderData.previewUrls || undefined
     };
 
     MOCK_ORDERS.unshift(newOrder); // Add to beginning
