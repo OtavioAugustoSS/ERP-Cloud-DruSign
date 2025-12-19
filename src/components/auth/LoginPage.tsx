@@ -38,11 +38,13 @@ export default function LoginPage() {
             <div className="w-full max-w-md">
                 {/* Logo / Header */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20 shadow-[0_0_30px_rgba(34,211,238,0.2)]">
-                        <Icons.Layers className="text-primary" size={32} />
+                    <div className="w-48 h-48 mx-auto mb-6 relative rounded-full overflow-hidden border-4 border-primary/20 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+                        <img
+                            src="/logo.png"
+                            alt="DruSign Logo"
+                            className="w-full h-full object-cover"
+                        />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">DruSign</h1>
-                    <p className="text-slate-400">Entre para gerenciar seus pedidos</p>
                 </div>
 
                 {/* Login Card */}
@@ -110,11 +112,7 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <div className="mt-8 text-center">
-                    <p className="text-slate-500 text-sm">
-                        Sistema Administrativo v2.0
-                    </p>
-                </div>
+
             </div>
         </div>
     );
