@@ -1,64 +1,116 @@
-# 🖨️ DruSign - Plataforma de E-commerce Web-to-Print
+# 🖨️ DruSign - ERP Web-to-Print Inteligente
 
-![Status do Projeto](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow)
-![Next.js](https://img.shields.io/badge/Next.js-14.2-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-teal)
-![MySQL](https://img.shields.io/badge/Database-MySQL-orange)
+![Status do Projeto](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow?style=for-the-badge)
+![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-teal?style=for-the-badge&logo=prisma)
+![MySQL](https://img.shields.io/badge/Database-MySQL-orange?style=for-the-badge&logo=mysql)
+![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css)
+
+> **Uma solução completa de E-commerce e Gestão Industrial para Comunicação Visual e Gráficas.**
+
+---
 
 ## 📖 Sobre o Projeto
 
-O **DruSign** é uma solução completa de E-commerce e ERP focada no nicho de **Comunicação Visual e Gráficas**. Diferente de lojas virtuais comuns, este sistema implementa a lógica de **Web-to-Print**, permitindo vendas baseadas em medidas personalizadas (metro quadrado), uploads de arquivos pesados e fluxos de produção complexos.
+O **DruSign** revoluciona a gestão de gráficas e empresas de comunicação visual ao integrar o fluxo de vendas online (Web-to-Print) com o controle total da produção industrial. 
 
-O sistema é dividido em três módulos principais:
-1.  **Painel Administrativo:** Gestão total de produtos, preços dinâmicos, verificação de arquivos (pre-flight) e controle financeiro.
-2.  **Portal de Produção (Funcionários):** Interface simplificada para a equipe operacional visualizar a fila de impressão, acabamento e atualizar status dos pedidos.
-3.  **E-commerce (Cliente Final):** Loja virtual onde o cliente personaliza medidas (Lona, Adesivo, ACM), envia a arte e realiza o pagamento.
+Diferente de sistemas genéricos, o DruSign entende a complexidade do nicho: vendas por metro quadrado, arquivos pesados (TIFF/PDF), acabamentos específicos (ilhós, bainha) e etapas de produção (Impressão, Corte, Serralheria).
 
----
+## 🚀 Funcionalidades Atuais
 
-## 🚀 Funcionalidades Principais
+O sistema está focado atualmente no **Módulo Administrativo**, oferecendo ferramentas robustas para a gestão interna:
 
-### 🔧 Módulo Administrativo (Foco Atual)
-* **Dashboard Industrial:** Interface Dark Mode focada em produtividade.
-* **Gestão de Preços Dinâmica:** Configuração de preço por m² e por espessura (ex: Acrílico 2mm vs 3mm).
-* **Verificação de Arquivos:** Pré-visualização de PDFs enviados pelos clientes, checagem de tamanho e aprovação/rejeição de arte.
-* **Fluxo de Pedidos:** Pipeline visual de status (Pendente -> Produção -> Acabamento -> Pronto).
-* **Histórico Completo:** Registro de todos os serviços executados.
+### 🔧 Painel Administrativo (Admin)
+*   **📊 Dashboard Industrial:** Visão geral em tempo real com métricas críticas e design Dark Mode focado em produtividade.
+*   **📋 Gestão de Pedidos Avançada:**
+    *   Listagem completa com filtros de status.
+    *   **Edição de Pedidos:** Altere instruções, dados do cliente e acabamentos sem sair da tela.
+    *   **Cancelamento Seguro:** Fluxo de cancelamento com histórico auditável.
+*   **🔍 Verificação de Arquivos (Pre-flight):**
+    *   Visualizador de PDF integrado.
+    *   Checklist automático de qualidade.
+    *   Aprovação e Reprovação de artes com feedback direto.
+*   **💬 Chat Interno:** Comunicação contextual vinculada a cada pedido para alinhar detalhes entre vendas e produção.
+*   **⚙️ Configurações Dinâmicas:**
+    *   Controle de Materiais e Preços por m².
+    *   Gestão de Acabamentos e Serviços Extras.
 
-### 🏭 Módulo de Produção (Em Breve)
-* Fila de tarefas por setor (Impressão, Corte, Serralheria).
-* Baixa de pedidos via QR Code ou Interface Tátil.
-
-### 🛒 Módulo E-commerce (Em Breve)
-* Calculadora em tempo real (Largura x Altura x Material).
-* Upload de arquivos (PDF/TIFF) integrado ao carrinho.
-* Checkout transparente.
-
----
-
-## 🛠️ Tech Stack
-
-O projeto foi construído utilizando as tecnologias mais modernas do ecossistema React:
-
-* **Frontend:** [Next.js 14](https://nextjs.org/) (App Router), React, Tailwind CSS.
-* **Backend:** Next.js Server Actions (API Routes).
-* **Banco de Dados:** MySQL.
-* **ORM:** [Prisma](https://www.prisma.io/) (Gerenciamento de Schema e Tipagem segura).
-* **Estado Global:** Zustand (Carrinho e Configurações).
-* **UI Components:** Lucide React (Ícones), Shadcn/UI patterns.
+### 🏭 Pipeline de Produção
+*   Fluxo visual de status: `Pendente` ➔ `Produção` ➔ `Acabamento` ➔ `Pronto`.
 
 ---
 
-## 📦 Como Rodar o Projeto
+## 🛠️ Stack Tecnológica
 
-Siga os passos abaixo para executar a aplicação em ambiente de desenvolvimento:
+O projeto utiliza o que há de mais moderno no ecossistema React para garantir performance, segurança e escalabilidade:
+
+*   **Frontend:** [Next.js 14](https://nextjs.org/) (App Router), React Server Components.
+*   **Estilização:** Tailwind CSS + Shadcn/UI + Lucide Icons.
+*   **Backend:** Next.js Server Actions (API Routes focadas em performance).
+*   **Banco de Dados:** MySQL.
+*   **ORM:** [Prisma](https://www.prisma.io/) (Type-safe database access).
+*   **Gerenciamento de Estado:** Zustand.
+*   **Autenticação:** Custom Auth Context.
+
+---
+
+## 📸 Screenshots
+
+*(Espaço reservado para prints das telas: Dashboard, Detalhes do Pedido, Modal de Edição)*
+
+---
+
+## 📦 Como Rodar Localmente
+
+Siga os passos abaixo para configurar o ambiente de desenvolvimento:
 
 ### Pré-requisitos
-* Node.js (v18 ou superior)
-* MySQL rodando localmente ou em container Docker
+*   Node.js (v18+)
+*   MySQL (Local ou Docker)
 
-### 1. Clone o repositório
+### 1. Clone o Repositório
 ```bash
-git clone [https://github.com/seu-usuario/e-commerce-drusign.git](https://github.com/seu-usuario/e-commerce-drusign.git)
+git clone https://github.com/seu-usuario/e-commerce-drusign.git
 cd e-commerce-drusign
+```
+
+### 2. Configure as Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto com as credenciais do banco:
+
+```properties
+DATABASE_URL="mysql://USER:PASSWORD@HOST:PORT/DATABASE"
+# Outras chaves necessárias...
+```
+
+### 3. Instale as Dependências
+```bash
+npm install
+# ou
+yarn install
+```
+
+### 4. Configure o Banco de Dados
+```bash
+# Gera o cliente Prisma
+npx prisma generate
+
+# Envia o schema para o banco (cria as tabelas)
+npx prisma db push
+
+# (Opcional) Popula o banco com dados iniciais
+npm run seed
+```
+
+### 5. Inicie o Servidor
+```bash
+npm run dev
+```
+
+Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir Issues ou Pull Requests para melhorias.
