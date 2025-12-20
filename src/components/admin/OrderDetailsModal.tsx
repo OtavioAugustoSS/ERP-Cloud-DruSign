@@ -12,7 +12,7 @@ interface OrderDetailsModalProps {
     order: Order | null;
 }
 
-export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
+function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
     const { user } = useAuth();
     const isEmployee = user?.role === 'employee';
 
@@ -52,7 +52,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
                     {/* Status Section */}
                     <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5">
@@ -68,48 +68,93 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                         </span>
                     </div>
 
-                    {/* Main Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                        {/* Column 1: Client & Product */}
-                        <div className="space-y-6">
+                    {/* 1. Client Info (Dedicated Section) */}
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                        <div className="flex items-start justify-between">
                             <div>
                                 <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Cliente</label>
-                                <div className="text-lg text-white font-medium">{order.clientName}</div>
-                                {order.clientPhone && (
-                                    <div className="flex items-center gap-2 text-sm text-cyan-400 mt-1">
-                                        <Icons.Phone size={14} />
-                                        <span>{order.clientPhone}</span>
-                                    </div>
-                                )}
-                                {order.clientDocument && (
-                                    <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
-                                        <Icons.IdCard size={14} />
-                                        <span>{order.clientDocument}</span>
-                                    </div>
-                                )}
+                                <div className="text-2xl text-white font-bold mb-3">{order.clientName}</div>
+                                <div className="flex flex-col gap-2">
+                                    {order.clientDocument && (
+                                        <div className="flex items-center gap-2 text-sm text-slate-300">
+                                            <Icons.IdCard size={16} className="text-cyan-400" />
+                                            <span>CPF/CNPJ: {order.clientDocument}</span>
+                                        </div>
+                                    )}
+                                    {order.clientPhone && (
+                                        <div className="flex items-center gap-2 text-sm text-slate-300">
+                                            <Icons.Phone size={16} className="text-cyan-400" />
+                                            <span>{order.clientPhone}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            {/* Status Badge moved here contextually or kept separate? Let's keep status separate above or here. 
+                                User screenshot 1 shows status separate at top. I will keep it consistent with new layout but prioritize client info.
+                            */}
+                        </div>
+                    </div>
 
-                            <div>
-                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Produto / Serviço</label>
-                                <div className="text-lg text-white font-bold">{order.productName || "Produto Personalizado"}</div>
-                                <div className="text-sm text-cyan-400 font-medium mt-1 uppercase">{order.serviceType?.replace(/_/g, ' ')}</div>
-                            </div>
+                    {/* 2. Main Grid: Product & Financial */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            <div>
-                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Dimensões e Quantidade</label>
-                                <div className="flex flex-wrap gap-4">
-                                    <div className="bg-white/5 px-4 py-3 rounded-lg border border-white/5">
-                                        <div className="text-xs text-slate-400 mb-1">Largura</div>
-                                        <div className="text-white font-mono">{order.width} cm</div>
+                        {/* Column 1: Product Details */}
+                        <div className="space-y-6">
+                            <div className="bg-black/20 p-5 rounded-xl border border-white/5 h-full">
+                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-4 block flex items-center gap-2">
+                                    <Icons.Layers size={14} /> Produto / Serviço
+                                </label>
+                                <div className="space-y-4">
+                                    <div>
+                                        <div className="text-lg text-white font-bold leading-tight">{order.productName || "Produto Personalizado"}</div>
+                                        <div className="text-sm text-cyan-400 font-medium mt-1 uppercase">{order.serviceType?.replace(/_/g, ' ')}</div>
                                     </div>
-                                    <div className="bg-white/5 px-4 py-3 rounded-lg border border-white/5">
-                                        <div className="text-xs text-slate-400 mb-1">Altura</div>
-                                        <div className="text-white font-mono">{order.height} cm</div>
+                                    <div className="grid grid-cols-2 gap-4 pt-2">
+                                        <div className="bg-white/5 px-3 py-2 rounded-lg">
+                                            <div className="text-[10px] text-slate-400 uppercase">Dimensões</div>
+                                            <div className="text-white font-mono text-sm">{order.width} x {order.height} cm</div>
+                                        </div>
+                                        <div className="bg-white/5 px-3 py-2 rounded-lg">
+                                            <div className="text-[10px] text-slate-400 uppercase">Quantidade</div>
+                                            <div className="text-white font-mono text-sm">{order.quantity} un</div>
+                                        </div>
                                     </div>
-                                    <div className="bg-white/5 px-4 py-3 rounded-lg border border-white/5">
-                                        <div className="text-xs text-slate-400 mb-1">Quantidade</div>
-                                        <div className="text-white font-mono">{order.quantity} un</div>
+
+                                    {/* Files */}
+                                    {order.filePaths && order.filePaths.length > 0 && (
+                                        <div>
+                                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Arquivos Anexados</label>
+                                            <div className="space-y-2">
+                                                {order.filePaths.map((path, index) => (
+                                                    <a
+                                                        key={index}
+                                                        href={path}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors group"
+                                                    >
+                                                        <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400 group-hover:scale-110 transition-transform">
+                                                            <Icons.FileText size={18} />
+                                                        </div>
+                                                        <div className="flex-1 overflow-hidden">
+                                                            <div className="text-sm text-white font-medium truncate">
+                                                                Arquivo {index + 1}
+                                                            </div>
+                                                            <div className="text-xs text-slate-400 truncate">
+                                                                {path.split('/').pop()}
+                                                            </div>
+                                                        </div>
+                                                        <Icons.Download size={16} className="text-slate-500 group-hover:text-white transition-colors" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <div className="text-[10px] text-slate-400 uppercase mb-1">Acabamento / Detalhes</div>
+                                        <div className="text-white text-sm bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg inline-block">
+                                            {order.finishing?.replace(/_/g, ' ') || 'Padrão'}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -117,77 +162,80 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
 
                         {/* Column 2: Financial & Instructions */}
                         <div className="space-y-6">
-                            <div>
-                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Financeiro</label>
-                                <div className="bg-black/40 p-5 rounded-xl border border-white/10">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-slate-400 text-sm">Valor Total</span>
-                                        <span className="text-2xl text-white font-bold tracking-tight">{formatCurrency(order.totalPrice)}</span>
-                                    </div>
-                                    <div className="text-xs text-slate-500 text-right">Calculado automaticamente</div>
+                            {/* Financial */}
+                            <div className="bg-black/40 p-5 rounded-xl border border-white/10">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-slate-400 text-sm font-medium">Valor Total</span>
+                                    <span className="text-2xl text-white font-bold tracking-tight">{formatCurrency(order.totalPrice)}</span>
                                 </div>
+                                <div className="text-xs text-slate-500 text-right">Calculado automaticamente</div>
                             </div>
 
+                            {/* Instructions (Cleaned) */}
                             <div>
                                 <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Instruções de Produção</label>
-                                <div className="bg-yellow-500/5 border border-yellow-500/10 p-4 rounded-xl min-h-[100px]">
+                                <div className="bg-yellow-500/5 border border-yellow-500/10 p-4 rounded-xl min-h-[80px]">
                                     {order.instructions ? (
-                                        <p className="text-yellow-100/90 text-sm leading-relaxed whitespace-pre-wrap">"{order.instructions}"</p>
+                                        <p className="text-yellow-100/90 text-sm leading-relaxed whitespace-pre-wrap">
+                                            "{order.instructions.replace(/\[Arquivos Anexados:.*?\]/, '').trim()}"
+                                        </p>
                                     ) : (
                                         <p className="text-slate-500 text-sm italic">Nenhuma instrução adicional.</p>
                                     )}
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Acabamento</label>
-                                <div className="text-white text-sm capitalize bg-white/5 px-3 py-2 rounded-lg inline-block border border-white/10">
-                                    {order.finishing?.replace(/_/g, ' ') || 'Padrão'}
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    {/* Abstracted Preview Section */}
-                    {(order.previewUrls && order.previewUrls.length > 0) ? (
-                        <div className="pt-4 border-t border-white/5">
-                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3 block">
-                                Arquivos Anexados ({order.previewUrls.length})
+                    {/* 3. Files / Downloads */}
+                    {(order.previewUrls && order.previewUrls.length > 0) || order.previewUrl ? (
+                        <div className="pt-2">
+                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3 block flex items-center gap-2">
+                                <Icons.Download size={14} /> Arquivos do Pedido
                             </label>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {order.previewUrls.map((url, index) => (
+                            <div className="grid grid-cols-1 gap-2">
+                                {order.previewUrls && order.previewUrls.length > 0 ? (
+                                    order.previewUrls.map((url, index) => (
+                                        <a
+                                            key={index}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                                                    <Icons.Description size={18} />
+                                                </div>
+                                                <span className="text-sm font-medium text-cyan-100 group-hover:text-white transition-colors">
+                                                    Visualizar Arquivo {index + 1}
+                                                </span>
+                                            </div>
+                                            <Icons.ExternalLink size={16} className="text-cyan-500/50 group-hover:text-cyan-400" />
+                                        </a>
+                                    ))
+                                ) : (
                                     <a
-                                        key={index}
-                                        href={url}
+                                        href={order.previewUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-400 border border-cyan-500/10 transition-all text-sm font-medium group"
+                                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all group"
                                     >
-                                        <div className="p-2 bg-cyan-500/10 rounded-lg group-hover:bg-cyan-500/20 transition-colors">
-                                            <Icons.Description size={18} />
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                                                <Icons.Description size={18} />
+                                            </div>
+                                            <span className="text-sm font-medium text-cyan-100 group-hover:text-white transition-colors">
+                                                Visualizar Arquivo Principal
+                                            </span>
                                         </div>
-                                        <div className="flex-1 truncate">
-                                            Arquivo {index + 1}
-                                        </div>
-                                        <Icons.Download size={16} className="opacity-50 group-hover:opacity-100" />
+                                        <Icons.ExternalLink size={16} className="text-cyan-500/50 group-hover:text-cyan-400" />
                                     </a>
-                                ))}
+                                )}
                             </div>
                         </div>
-                    ) : order.previewUrl && (
-                        <div className="pt-4 border-t border-white/5">
-                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3 block">Arquivos / Preview</label>
-                            <a
-                                href={order.previewUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 border border-cyan-500/20 transition-all text-sm font-bold shadow-[0_0_15px_rgba(34,211,238,0.1)] hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
-                            >
-                                <Icons.Download size={18} />
-                                Baixar / Visualizar Arquivo
-                            </a>
-                        </div>
-                    )}
+                    ) : null}
+
                 </div>
 
                 {/* Footer */}
@@ -209,3 +257,6 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
         </div>
     );
 }
+
+// Wrap with React.memo to prevent unnecessary re-renders
+export default React.memo(OrderDetailsModal);

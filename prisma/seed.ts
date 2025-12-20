@@ -1,3 +1,4 @@
+
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -5,116 +6,118 @@ const prisma = new PrismaClient()
 async function main() {
     console.log('Seeding database...')
 
-    // Cleanup
-    try {
-        await prisma.orderItem.deleteMany({})
-        await prisma.product.deleteMany({})
-        console.log('Cleaned up old data.')
-    } catch (e) {
-        // Ignore if failing first time
-        console.log('Cleanup skipped (or failed):', e)
-    }
+    // Cleanup existing products to avoid conflicts or duplicates on re-seed
+    // Note: This might fail if there are foreign key constraints (Orders), so we use upsert or delete if safe.
+    // For now, we'll try to upsert or create. Use upsert to be safe.
 
-    // LONA
-    await prisma.product.create({
-        data: {
-            id: 'lona',
-            name: 'Lona',
-            description: 'Lona para banners e faixas.',
-            pricePerSqMeter: 50.00,
-            minPrice: 20.00,
-            isFixedPrice: false,
-            pricingConfig: {},
+    const products = [
+        {
+            id: 'banner-380',
+            name: 'Lona 380g',
+            category: 'LONA',
+            pricePerM2: 40.00,
+            description: 'Lona econômica para promoções.',
+            pricingConfig: {
+                types: ['Banner Promocional'],
+                finishings: ['Bainha e Ilhós', 'Sem Acabamento']
+            }
         },
-    })
-
-    // ADESIVO
-    await prisma.product.create({
-        data: {
-            id: 'adesivo',
-            name: 'Adesivo',
-            description: 'Adesivo vinil para diversas aplicações.',
-            pricePerSqMeter: 65.00,
-            minPrice: 15.00,
-            isFixedPrice: false,
-            pricingConfig: {},
+        {
+            id: 'banner-440',
+            name: 'Lona 440g',
+            category: 'LONA',
+            pricePerM2: 50.00,
+            description: 'Lona resistente para banners e fachadas.',
+            pricingConfig: {
+                types: ['Banner Promocional', 'Grandes Formatos'],
+                finishings: ['Bainha e Ilhós', 'Bastão e Corda', 'Sem Acabamento']
+            }
         },
-    })
-
-    // ACM
-    await prisma.product.create({
-        data: {
-            id: 'acm',
+        {
+            id: 'adesivo-vinil',
+            name: 'Adesivo Vinil',
+            category: 'ADESIVO',
+            pricePerM2: 65.00,
+            description: 'Adesivo vinil de alta qualidade.',
+            pricingConfig: {
+                types: ['Fosco', 'Brilhoso', 'Transparente'],
+                pricesByType: {
+                    'Fosco': 65.00,
+                    'Brilhoso': 65.00,
+                    'Transparente': 65.00
+                }
+            }
+        },
+        {
+            id: 'chapa-acm',
             name: 'ACM',
-            description: 'Placa de Alumínio Composto.',
-            pricePerSqMeter: 120.00,
-            minPrice: 50.00,
-            isFixedPrice: false,
-            pricingConfig: {},
+            category: 'ACM',
+            pricePerM2: 120.00,
+            description: 'Alumínio Composto para fachadas e placas.',
+            pricingConfig: {}
         },
-    })
-
-    // PVC
-    await prisma.product.create({
-        data: {
-            id: 'pvc',
-            name: 'PVC',
-            description: 'Placa de PVC.',
-            pricePerSqMeter: 120.00,
-            minPrice: 30.00,
-            isFixedPrice: false,
-            pricingConfig: {},
+        {
+            id: 'chapa-pvc',
+            name: 'PVC Expandido',
+            category: 'PVC',
+            pricePerM2: 120.00,
+            description: 'Placas de PVC para sinalização.',
+            pricingConfig: {}
         },
-    })
-
-    // PS
-    await prisma.product.create({
-        data: {
-            id: 'ps',
-            name: 'PS (Chapa)',
-            description: 'Poliestireno.',
-            pricePerSqMeter: 150.00,
-            minPrice: 30.00,
-            isFixedPrice: false,
-            pricingConfig: {},
+        {
+            id: 'chapa-ps',
+            name: 'PS (Poliestireno)',
+            category: 'PS',
+            pricePerM2: 150.00,
+            description: 'Material rígido e econômico.',
+            pricingConfig: {}
         },
-    })
-
-    // ACRÍLICO
-    await prisma.product.create({
-        data: {
-            id: 'acrilico',
+        {
+            id: 'chapa-acrilico',
             name: 'Acrílico',
-            description: 'Chapa de Acrílico.',
-            pricePerSqMeter: 350.00,
-            minPrice: 50.00,
-            isFixedPrice: false,
-            // Store thickness pricing here
+            category: 'ACRÍLICO',
+            pricePerM2: 350.00,
+            description: 'Material nobre com alto brilho.',
             pricingConfig: {
                 hasThickness: true,
-                thicknessOptions: ['1mm', '2mm', '3mm', '4mm', '5mm', '6mm', '8mm'],
+                thicknessOptions: ['1mm', '2mm', '3mm', '4mm', '5mm', '6mm', '8mm', '10mm', '12mm'],
                 pricesByThickness: {
-                    '1mm': 280,
-                    '2mm': 350,
-                    '3mm': 500,
-                    '4mm': 650,
-                    '5mm': 800,
-                    '6mm': 950,
-                    '8mm': 1200
+                    '1mm': 280, '2mm': 350, '3mm': 500, '4mm': 650, '5mm': 800, '6mm': 950, '8mm': 1200, '10mm': 1400, '12mm': 1600
                 }
-            },
-        },
-    })
+            }
+        }
+    ];
 
-    console.log('Seeding finished successfully.')
+    for (const p of products) {
+        await prisma.product.upsert({
+            where: { id: p.id },
+            update: {
+                name: p.name,
+                category: p.category,
+                pricePerM2: p.pricePerM2,
+                description: p.description,
+                // Cast to any to avoid strict JSON typing issues in seed
+                pricingConfig: p.pricingConfig as any
+            },
+            create: {
+                id: p.id,
+                name: p.name,
+                category: p.category,
+                pricePerM2: p.pricePerM2,
+                description: p.description,
+                pricingConfig: p.pricingConfig as any
+            }
+        });
+    }
+
+    console.log('Database seeded successfully.')
 }
 
 main()
-    .then(async () => {
-        await prisma.$disconnect()
-    })
-    .catch(async (e) => {
+    .catch((e) => {
         console.error(e)
-        await prisma.$disconnect()
         process.exit(1)
+    })
+    .finally(async () => {
+        await prisma.$disconnect()
     })

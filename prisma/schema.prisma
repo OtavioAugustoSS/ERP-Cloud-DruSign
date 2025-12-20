@@ -1,57 +1,129 @@
-generator client {
-  provider = "prisma-client-js"
-  engineType = "library"
-}
-
+// Declaração do Banco
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-enum OrderStatus {
-  PENDING
-  IN_PRODUCTION
-  COMPLETED
+generator client {
+  provider = "prisma-client-js"
 }
 
+// ------------------------------
+// 1. Tabela de Usuários (Login)
+// ------------------------------
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String   // Senha criptografada (Hash)
+  role      String   @default("employee") // "admin" ou "employee"
+  phone     String?  // Contato do usuário
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relacionamentos
+  actions   Log[]    // Histórico de ações desse usuário
+  notifications Notification[]
+}
+
+// ------------------------------
+// 2. Tabela de Produtos (Preços)
+// ------------------------------
 model Product {
-  id              String      @id @default(cuid())
-  name            String
-  description     String?     @db.Text
-  pricePerSqMeter Float
-  minPrice        Float
-  isFixedPrice    Boolean     @default(false)
-  image           String?
-  pricingConfig   Json?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  orderItems      OrderItem[]
+  id          String   @id @default(uuid())
+  name        String
+  category    String   // "Lona", "Adesivo", etc.
+  pricePerM2  Float    // Preço base
+  description String?
+  image       String?
+  pricingConfig Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  OrderItems OrderItem[]
 }
 
+// ------------------------------
+// 3. Tabela de Clientes (Novo)
+// ------------------------------
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  document  String?  // CPF ou CNPJ
+  
+  orders    Order[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ------------------------------
+// 4. Tabela de Pedidos (Histórico)
+// ------------------------------
 model Order {
-  id          String      @id @default(cuid())
-  clientName  String
-  status      OrderStatus @default(PENDING)
-  totalPrice  Float
-  items       OrderItem[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String      @id @default(uuid()) // Ex: "ORD-123"
+  
+  // Relacionamento com Cliente (Opcional, pois pode ser venda balcão sem cadastro)
+  clientId      String?
+  client        Client?     @relation(fields: [clientId], references: [id])
+  
+  clientName    String?     // Backup caso não tenha cadastro completo
+  clientDocument String?    // CPF ou CNPJ do cliente (separado)
+  clientPhone   String?     // Telefone do cliente (separado)
+  filePaths     Json?       // Links dos arquivos anexados (Array de strings)
+  
+  // Status expandido: "REQUESTED" (Solicitação do Site) -> "PENDING" (Aprovado)
+  status        String      // "REQUESTED", "PENDING", "IN_PRODUCTION", "READY_FOR_SHIPPING", "COMPLETED"
+  
+  totalPrice    Float
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  items         OrderItem[]
 }
 
 model OrderItem {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  // Dimensions in meters (or user preferred unit, assuming meters for calculation base)
-  width      Float?
-  height     Float?
-  fileUrl    String?
-  finalPrice Float
-  quantity   Int      @default(1)
-  orderId    String?
-  order      Order?   @relation(fields: [orderId], references: [id])
-  createdAt  DateTime @default(now())
+  id           String  @id @default(uuid())
+  orderId      String
+  order        Order   @relation(fields: [orderId], references: [id])
+  
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+  
+  width        Float
+  height       Float
+  quantity     Int
+  serviceType  String? // Ex: "Banner Promocional"
+  finishing    String? // Ex: "Bainha e Ilhós"
+  instructions String?
+}
 
-  @@index([productId])
-  @@index([orderId])
+// ------------------------------
+// 5. Sistema de Notificações (Novo)
+// ------------------------------
+model Notification {
+  id        String   @id @default(uuid())
+  
+  userId    String   // Quem recebe a notificação
+  user      User     @relation(fields: [userId], references: [id])
+  
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  type      String   // "NEW_REQUEST", "ORDER_ASSIGNED", "SYSTEM"
+  
+  timestamp DateTime @default(now())
+}
+
+// ------------------------------
+// 6. Logs de Sistema (Opcional)
+// ------------------------------
+model Log {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   
+  timestamp DateTime @default(now())
 }

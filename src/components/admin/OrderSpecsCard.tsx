@@ -124,7 +124,7 @@ export default function OrderSpecsCard({
                                 next[tabKey] = {
                                     ...next[tabKey],
                                     id: p.id,
-                                    pricePerM2: p.pricePerSqMeter,
+                                    pricePerM2: p.pricePerM2,
                                     ...(p.pricingConfig as object)
                                 };
                             }
@@ -251,7 +251,7 @@ export default function OrderSpecsCard({
                 alert('Preço salvo com sucesso!');
                 setShowSettings(false);
             } else {
-                alert('Erro ao salvar: ' + result.message);
+                alert('Erro ao salvar: ' + (result as any).message); // Fix potential 'message' missing on result type
             }
         } catch (error: any) {
             console.error(error);

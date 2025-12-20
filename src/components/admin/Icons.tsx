@@ -1,5 +1,7 @@
 import React from 'react';
 import {
+    DollarSign,
+    Eye,
     LayoutDashboard,
     ShoppingCart,
     History,
@@ -18,7 +20,6 @@ import {
     Download,
     CheckCircle,
     MoreVertical,
-    Eye,
     Printer,
     Play,
     Truck,
@@ -46,6 +47,8 @@ import {
 } from 'lucide-react';
 
 export const Icons = {
+    DollarSign: DollarSign,
+    Eye: Eye,
     Dashboard: LayoutDashboard,
     Cart: ShoppingCart,
     History: History,
@@ -88,5 +91,7 @@ export const Icons = {
     Link: Link,
     ArrowRight: ArrowRight,
     Phone: Phone,
-    IdCard: IdCard
+    IdCard: IdCard,
+    ExternalLink: Link,
+    FileText: FileText
 };
