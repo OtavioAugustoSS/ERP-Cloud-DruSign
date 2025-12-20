@@ -183,3 +183,29 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
         return { success: false };
     }
 };
+
+export const updateOrderDetails = async (id: string, data: Partial<OrderInput>): Promise<{ success: boolean; error?: string }> => {
+    try {
+        await prisma.order.update({
+            where: { id },
+            data: {
+                clientName: data.clientName,
+                clientDocument: data.clientDocument,
+                clientPhone: data.clientPhone,
+                items: {
+                    updateMany: {
+                        where: { orderId: id },
+                        data: {
+                            instructions: data.instructions,
+                            finishing: data.finishing
+                        }
+                    }
+                }
+            }
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating order details:", error);
+        return { success: false, error: "Erro ao atualizar detalhes do pedido." };
+    }
+};

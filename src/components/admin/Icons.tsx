@@ -43,7 +43,8 @@ import {
     X,
     ArrowRight,
     Phone,
-    IdCard
+    IdCard,
+    Pencil
 } from 'lucide-react';
 
 export const Icons = {
@@ -93,5 +94,7 @@ export const Icons = {
     Phone: Phone,
     IdCard: IdCard,
     ExternalLink: Link,
-    FileText: FileText
+    FileText: FileText,
+    Edit: Pencil,
+    Ban: Ban
 };

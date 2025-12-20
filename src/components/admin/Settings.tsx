@@ -129,6 +129,37 @@ export default function Settings() {
         }
     };
 
+    const handleDeleteVariant = async (product: Product, type: 'thickness' | 'subtype', variantKey: string) => {
+        if (!window.confirm(`Tem certeza que deseja excluir a variação "${variantKey}"?`)) return;
+
+        const newConfig = { ...product.pricingConfig };
+
+        if (type === 'thickness') {
+            // Remove from pricing map
+            if (newConfig.pricesByThickness) {
+                const { [variantKey]: _, ...rest } = newConfig.pricesByThickness;
+                newConfig.pricesByThickness = rest;
+            }
+            // Remove from options array
+            if (newConfig.thicknessOptions) {
+                newConfig.thicknessOptions = newConfig.thicknessOptions.filter((t: string) => t !== variantKey);
+            }
+        } else if (type === 'subtype') {
+            // Remove from pricing map
+            if (newConfig.pricesByType) {
+                const { [variantKey]: _, ...rest } = newConfig.pricesByType;
+                newConfig.pricesByType = rest;
+            }
+        }
+
+        // Call update API
+        const result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
+
+        if (result.success && result.product) {
+            setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
+        }
+    };
+
     const getProductIcon = (category: string) => {
         switch (category) {
             case 'Lona': return <Icons.Texture className="text-white/50" size={18} />;
@@ -293,7 +324,13 @@ export default function Settings() {
                                                                             </div>
                                                                         </td>
                                                                         <td className="p-4 pr-6 text-center">
-                                                                            {/* Optional: Add delete context for variants or keep empty */}
+                                                                            <button
+                                                                                onClick={() => handleDeleteVariant(product, 'thickness', thickness)}
+                                                                                className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                                                title="Excluir Variação"
+                                                                            >
+                                                                                <Icons.Trash size={18} />
+                                                                            </button>
                                                                         </td>
                                                                     </tr>
                                                                 );
@@ -327,6 +364,13 @@ export default function Settings() {
                                                                             </div>
                                                                         </td>
                                                                         <td className="p-4 pr-6 text-center">
+                                                                            <button
+                                                                                onClick={() => handleDeleteVariant(product, 'subtype', type)}
+                                                                                className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                                                title="Excluir Variação"
+                                                                            >
+                                                                                <Icons.Trash size={18} />
+                                                                            </button>
                                                                         </td>
                                                                     </tr>
                                                                 );

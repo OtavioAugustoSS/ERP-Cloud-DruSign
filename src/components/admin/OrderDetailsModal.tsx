@@ -1,22 +1,94 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Order, OrderStatus } from '../../types';
 import { formatCurrency } from '../../lib/utils/price';
 import { useAuth } from '../../context/AuthContext';
+import { updateOrderDetails, updateOrderStatus } from '../../actions/order';
 
 interface OrderDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
     order: Order | null;
+    onUpdate?: () => void;
 }
 
-function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
+function OrderDetailsModal({ isOpen, onClose, order: initialOrder, onUpdate }: OrderDetailsModalProps) {
     const { user } = useAuth();
     const isEmployee = user?.role === 'employee';
+    const [order, setOrder] = useState<Order | null>(initialOrder);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Form State
+    const [formData, setFormData] = useState({
+        clientName: '',
+        clientDocument: '',
+        clientPhone: '',
+        instructions: '',
+        finishing: ''
+    });
+
+    useEffect(() => {
+        setOrder(initialOrder);
+        if (initialOrder) {
+            setFormData({
+                clientName: initialOrder.clientName || '',
+                clientDocument: initialOrder.clientDocument || '',
+                clientPhone: initialOrder.clientPhone || '',
+                instructions: initialOrder.instructions || '',
+                finishing: initialOrder.finishing || ''
+            });
+        }
+        setIsEditing(false);
+    }, [initialOrder, isOpen]);
 
     if (!isOpen || !order) return null;
+
+    const handleCancel = async () => {
+        if (!confirm("Tem certeza que deseja CANCELAR este pedido? Ele será movido para o histórico.")) {
+            return;
+        }
+
+        setIsSaving(true);
+        const res = await updateOrderStatus(order.id, OrderStatus.CANCELLED);
+        setIsSaving(false);
+
+        if (res.success) {
+            if (onUpdate) onUpdate();
+            onClose();
+        } else {
+            alert("Erro ao cancelar o pedido.");
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        const res = await updateOrderDetails(order.id, {
+            clientName: formData.clientName,
+            clientDocument: formData.clientDocument,
+            clientPhone: formData.clientPhone,
+            instructions: formData.instructions,
+            finishing: formData.finishing
+        });
+
+        if (res.success) {
+            setOrder({
+                ...order,
+                clientName: formData.clientName,
+                clientDocument: formData.clientDocument,
+                clientPhone: formData.clientPhone,
+                instructions: formData.instructions,
+                finishing: formData.finishing
+            });
+            setIsEditing(false);
+            if (onUpdate) onUpdate();
+        } else {
+            alert("Erro ao salvar alterações");
+        }
+        setIsSaving(false);
+    };
 
     const formatStatus = (status: OrderStatus) => {
         switch (status) {
@@ -31,24 +103,38 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className={`bg-surface-dark border ${isEditing ? 'border-primary/50 shadow-[0_0_50px_rgba(34,211,238,0.2)]' : 'border-white/10'} rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all`}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-xl font-bold text-white">Detalhes do Pedido</h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-xl font-bold text-white">Detalhes do Pedido</h3>
+                            {isEditing && <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full uppercase font-bold tracking-wider">Modo Edição</span>}
+                        </div>
                         <div className="flex items-center gap-3 text-sm">
                             <span className="font-mono text-cyan-400">#{order.id}</span>
                             <span className="text-slate-500">•</span>
                             <span className="text-slate-400">{new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <Icons.Close size={24} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {!isEmployee && !isEditing && (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                                title="Editar Pedido"
+                            >
+                                <Icons.Edit size={20} />
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                        >
+                            <Icons.Close size={24} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -68,30 +154,59 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
                         </span>
                     </div>
 
-                    {/* 1. Client Info (Dedicated Section) */}
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                    {/* 1. Client Info (Editable) */}
+                    <div className={`bg-white/5 border ${isEditing ? 'border-primary/30 bg-primary/5' : 'border-white/10'} rounded-xl p-5 transition-colors`}>
                         <div className="flex items-start justify-between">
-                            <div>
-                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Cliente</label>
-                                <div className="text-2xl text-white font-bold mb-3">{order.clientName}</div>
-                                <div className="flex flex-col gap-2">
-                                    {order.clientDocument && (
-                                        <div className="flex items-center gap-2 text-sm text-slate-300">
-                                            <Icons.IdCard size={16} className="text-cyan-400" />
-                                            <span>CPF/CNPJ: {order.clientDocument}</span>
+                            <div className="w-full">
+                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                    {isEditing && <Icons.Edit size={12} className="text-primary" />} Cliente
+                                </label>
+
+                                {isEditing ? (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <input
+                                                value={formData.clientName}
+                                                onChange={e => setFormData({ ...formData, clientName: e.target.value })}
+                                                placeholder="Nome do Cliente"
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary/50 text-lg font-bold"
+                                            />
                                         </div>
-                                    )}
-                                    {order.clientPhone && (
-                                        <div className="flex items-center gap-2 text-sm text-slate-300">
-                                            <Icons.Phone size={16} className="text-cyan-400" />
-                                            <span>{order.clientPhone}</span>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input
+                                                value={formData.clientDocument}
+                                                onChange={e => setFormData({ ...formData, clientDocument: e.target.value })}
+                                                placeholder="CPF/CNPJ"
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
+                                            />
+                                            <input
+                                                value={formData.clientPhone}
+                                                onChange={e => setFormData({ ...formData, clientPhone: e.target.value })}
+                                                placeholder="Telefone"
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-primary/50"
+                                            />
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="text-2xl text-white font-bold mb-3">{order.clientName}</div>
+                                        <div className="flex flex-col gap-2">
+                                            {order.clientDocument && (
+                                                <div className="flex items-center gap-2 text-sm text-slate-300">
+                                                    <Icons.IdCard size={16} className="text-cyan-400" />
+                                                    <span>CPF/CNPJ: {order.clientDocument}</span>
+                                                </div>
+                                            )}
+                                            {order.clientPhone && (
+                                                <div className="flex items-center gap-2 text-sm text-slate-300">
+                                                    <Icons.Phone size={16} className="text-cyan-400" />
+                                                    <span>{order.clientPhone}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
-                            {/* Status Badge moved here contextually or kept separate? Let's keep status separate above or here. 
-                                User screenshot 1 shows status separate at top. I will keep it consistent with new layout but prioritize client info.
-                            */}
                         </div>
                     </div>
 
@@ -150,11 +265,21 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Finishing (Editable) */}
                                     <div>
                                         <div className="text-[10px] text-slate-400 uppercase mb-1">Acabamento / Detalhes</div>
-                                        <div className="text-white text-sm bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg inline-block">
-                                            {order.finishing?.replace(/_/g, ' ') || 'Padrão'}
-                                        </div>
+                                        {isEditing ? (
+                                            <input
+                                                value={formData.finishing}
+                                                onChange={e => setFormData({ ...formData, finishing: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
+                                            />
+                                        ) : (
+                                            <div className="text-white text-sm bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg inline-block">
+                                                {order.finishing?.replace(/_/g, ' ') || 'Padrão'}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -171,86 +296,80 @@ function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
                                 <div className="text-xs text-slate-500 text-right">Calculado automaticamente</div>
                             </div>
 
-                            {/* Instructions (Cleaned) */}
+                            {/* Instructions (Editable) */}
                             <div>
-                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">Instruções de Produção</label>
-                                <div className="bg-yellow-500/5 border border-yellow-500/10 p-4 rounded-xl min-h-[80px]">
-                                    {order.instructions ? (
-                                        <p className="text-yellow-100/90 text-sm leading-relaxed whitespace-pre-wrap">
-                                            "{order.instructions.replace(/\[Arquivos Anexados:.*?\]/, '').trim()}"
-                                        </p>
+                                <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 block">
+                                    {isEditing && <Icons.Edit size={12} className="inline mr-1" />} Instruções de Produção
+                                </label>
+                                <div className={`bg-yellow-500/5 border ${isEditing ? 'border-primary/30' : 'border-yellow-500/10'} p-4 rounded-xl min-h-[80px]`}>
+                                    {isEditing ? (
+                                        <textarea
+                                            value={formData.instructions}
+                                            onChange={e => setFormData({ ...formData, instructions: e.target.value })}
+                                            className="w-full bg-transparent border-none text-yellow-100/90 text-sm leading-relaxed focus:outline-none resize-none h-[120px]"
+                                            placeholder="Instruções de produção..."
+                                        />
                                     ) : (
-                                        <p className="text-slate-500 text-sm italic">Nenhuma instrução adicional.</p>
+                                        order.instructions ? (
+                                            <p className="text-yellow-100/90 text-sm leading-relaxed whitespace-pre-wrap">
+                                                "{order.instructions.replace(/\[Arquivos Anexados:.*?\]/, '').trim()}"
+                                            </p>
+                                        ) : (
+                                            <p className="text-slate-500 text-sm italic">Nenhuma instrução adicional.</p>
+                                        )
                                     )}
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* 3. Files / Downloads */}
-                    {(order.previewUrls && order.previewUrls.length > 0) || order.previewUrl ? (
-                        <div className="pt-2">
-                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3 block flex items-center gap-2">
-                                <Icons.Download size={14} /> Arquivos do Pedido
-                            </label>
-                            <div className="grid grid-cols-1 gap-2">
-                                {order.previewUrls && order.previewUrls.length > 0 ? (
-                                    order.previewUrls.map((url, index) => (
-                                        <a
-                                            key={index}
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
-                                                    <Icons.Description size={18} />
-                                                </div>
-                                                <span className="text-sm font-medium text-cyan-100 group-hover:text-white transition-colors">
-                                                    Visualizar Arquivo {index + 1}
-                                                </span>
-                                            </div>
-                                            <Icons.ExternalLink size={16} className="text-cyan-500/50 group-hover:text-cyan-400" />
-                                        </a>
-                                    ))
-                                ) : (
-                                    <a
-                                        href={order.previewUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all group"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
-                                                <Icons.Description size={18} />
-                                            </div>
-                                            <span className="text-sm font-medium text-cyan-100 group-hover:text-white transition-colors">
-                                                Visualizar Arquivo Principal
-                                            </span>
-                                        </div>
-                                        <Icons.ExternalLink size={16} className="text-cyan-500/50 group-hover:text-cyan-400" />
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    ) : null}
-
                 </div>
 
                 {/* Footer */}
                 <div className="p-6 border-t border-white/5 bg-white/5 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-2.5 rounded-xl hover:bg-white/10 text-white font-medium transition-colors"
-                    >
-                        Fechar
-                    </button>
-                    {!isEmployee && (
-                        <button className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
-                            <Icons.Print size={18} />
-                            Imprimir Ordem
-                        </button>
+                    {isEditing ? (
+                        <>
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-6 py-2.5 rounded-xl hover:bg-white/10 text-slate-400 font-medium transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="px-6 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold shadow-lg shadow-green-500/20 transition-all flex items-center gap-2"
+                            >
+                                <Icons.Save size={18} />
+                                {isSaving ? "Salvando..." : "Salvar Alterações"}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="px-6 py-2.5 rounded-xl hover:bg-white/10 text-white font-medium transition-colors"
+                            >
+                                Fechar
+                            </button>
+                            {!isEmployee && (
+                                <>
+                                    {order.status !== OrderStatus.CANCELLED && order.status !== OrderStatus.COMPLETED && (
+                                        <button
+                                            onClick={handleCancel}
+                                            className="px-6 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold border border-red-500/20 hover:border-red-500/40 transition-all flex items-center gap-2 mr-auto"
+                                            title="Cancelar Pedido (Enviar para histórico)"
+                                        >
+                                            <Icons.Ban size={18} />
+                                            Cancelar
+                                        </button>
+                                    )}
+                                    <button className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+                                        <Icons.Print size={18} />
+                                        Imprimir Ordem
+                                    </button>
+                                </>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
