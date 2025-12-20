@@ -31,42 +31,61 @@ export default function Settings() {
         setLoading(false);
     };
 
-    const handlePriceChange = (id: string, value: string) => {
+    const handlePriceChange = (id: string, key: string, value: string) => {
+        // key is unique identifier for the field (e.g., productID for base, or productID:subtype:Fosco)
         setEditingValues(prev => ({
             ...prev,
-            [id]: value
+            [key]: value
         }));
     };
 
-    const handlePriceBlur = async (id: string) => {
-        const valueStr = editingValues[id];
+    const handlePriceBlur = async (product: Product, priceType: 'base' | 'thickness' | 'subtype', variantKey?: string) => {
+        const key = variantKey ? `${product.id}:${priceType}:${variantKey}` : product.id;
+        const valueStr = editingValues[key];
+
         if (valueStr === undefined) return; // No change
 
-        // Parse value (handling commas for decimals if user types like PT-BR)
         const normalizedValue = valueStr.replace(',', '.');
         const newPrice = parseFloat(normalizedValue);
 
         if (isNaN(newPrice)) {
-            // Revert if invalid
             setEditingValues(prev => {
                 const next = { ...prev };
-                delete next[id];
+                delete next[key];
                 return next;
             });
             return;
         }
 
-        setSavingId(id);
-        const result = await updateProductPricing(id, newPrice);
+        setSavingId(key);
+
+        let result;
+        if (priceType === 'base') {
+            result = await updateProductPricing(product.id, newPrice, product.pricingConfig);
+        } else {
+            // Update nested config
+            const newConfig = { ...product.pricingConfig };
+
+            if (priceType === 'thickness') {
+                newConfig.pricesByThickness = {
+                    ...(newConfig.pricesByThickness || {}),
+                    [variantKey!]: newPrice
+                };
+            } else if (priceType === 'subtype') {
+                newConfig.pricesByType = {
+                    ...(newConfig.pricesByType || {}),
+                    [variantKey!]: newPrice
+                };
+            }
+
+            result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
+        }
 
         if (result.success && result.product) {
-            // Update local state to reflect confirmed save
-            setProducts(prev => prev.map(p => p.id === id ? result.product! : p));
-
-            // Clear editing state so it shows the formatted value again
+            setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
             setEditingValues(prev => {
                 const next = { ...prev };
-                delete next[id];
+                delete next[key];
                 return next;
             });
         }
@@ -174,6 +193,15 @@ export default function Settings() {
                                 const categoryProducts = products.filter(p => p.category === category);
                                 if (categoryProducts.length === 0) return null;
 
+                                const itemCount = categoryProducts.reduce((acc, product) => {
+                                    const hasThickness = product.pricingConfig?.thicknessOptions && product.pricingConfig.thicknessOptions.length > 0;
+                                    const hasTypes = product.pricingConfig?.pricesByType && Object.keys(product.pricingConfig.pricesByType).length > 0;
+
+                                    if (hasThickness) return acc + product.pricingConfig!.thicknessOptions!.length;
+                                    if (hasTypes) return acc + Object.keys(product.pricingConfig!.pricesByType!).length;
+                                    return acc + 1;
+                                }, 0);
+
                                 return (
                                     <div key={category} className="rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-xl">
                                         <div className="p-4 border-b border-white/5 bg-black/20 flex items-center gap-3">
@@ -182,7 +210,7 @@ export default function Settings() {
                                             </div>
                                             <h4 className="text-white font-bold text-lg">{category}</h4>
                                             <span className="px-2 py-0.5 rounded-full bg-white/5 text-xs text-slate-400 font-mono">
-                                                {categoryProducts.length} itens
+                                                {itemCount} itens
                                             </span>
                                         </div>
 
@@ -195,41 +223,117 @@ export default function Settings() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-white/5 text-sm text-slate-300">
-                                                {categoryProducts.map((product) => (
-                                                    <tr key={product.id} className="hover:bg-white/[0.02] transition-colors group">
-                                                        <td className="p-4 pl-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-white font-medium">{product.name}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-4 text-right">
-                                                            <div className="relative">
-                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
-                                                                <input
-                                                                    className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none ${savingId === product.id ? 'opacity-50' : ''} ${editingValues[product.id] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
-                                                                    type="text"
-                                                                    value={editingValues[product.id] !== undefined ? editingValues[product.id] : product.pricePerM2.toFixed(2)}
-                                                                    onChange={(e) => handlePriceChange(product.id, e.target.value)}
-                                                                    onBlur={() => handlePriceBlur(product.id)}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.currentTarget.blur();
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-4 pr-6 text-center">
-                                                            <button
-                                                                onClick={() => handleDeleteProduct(product.id)}
-                                                                className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                                title="Excluir Material"
-                                                            >
-                                                                <Icons.Trash size={18} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                {categoryProducts.map((product) => {
+                                                    const hasThickness = product.pricingConfig?.thicknessOptions && product.pricingConfig.thicknessOptions.length > 0;
+                                                    const hasTypes = product.pricingConfig?.pricesByType && Object.keys(product.pricingConfig.pricesByType).length > 0;
+                                                    const hasVariants = hasThickness || hasTypes;
+
+                                                    return (
+                                                        <React.Fragment key={product.id}>
+                                                            {/* Base Product Row - Only show if NO variants */}
+                                                            {!hasVariants && (
+                                                                <tr className="hover:bg-white/[0.02] transition-colors group">
+                                                                    <td className="p-4 pl-6">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="text-white font-medium">{product.name}</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="p-4 text-right">
+                                                                        <div className="relative">
+                                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
+                                                                            <input
+                                                                                className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none 
+                                                                                ${savingId === product.id ? 'opacity-50' : ''} 
+                                                                                ${editingValues[product.id] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
+                                                                                type="text"
+                                                                                value={editingValues[product.id] !== undefined ? editingValues[product.id] : product.pricePerM2.toFixed(2)}
+                                                                                onChange={(e) => handlePriceChange(product.id, product.id, e.target.value)}
+                                                                                onBlur={() => handlePriceBlur(product, 'base')}
+                                                                                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                                            />
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="p-4 pr-6 text-center">
+                                                                        <button
+                                                                            onClick={() => handleDeleteProduct(product.id)}
+                                                                            className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                                            title="Excluir Material"
+                                                                        >
+                                                                            <Icons.Trash size={18} />
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+
+                                                            {/* Variants: Thickness (Acrylic) */}
+                                                            {hasThickness && product.pricingConfig.thicknessOptions.map((thickness: string) => {
+                                                                const key = `${product.id}:thickness:${thickness}`;
+                                                                const price = product.pricingConfig.pricesByThickness?.[thickness] || product.pricePerM2;
+                                                                return (
+                                                                    <tr key={key} className="hover:bg-white/[0.02] transition-colors group">
+                                                                        <td className="p-4 pl-6">
+                                                                            <div className="flex items-center gap-2">
+                                                                                {/* Flattened display: Product Name + Thickness */}
+                                                                                <span className="text-white font-medium">{product.name} {thickness}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-4 text-right">
+                                                                            <div className="relative">
+                                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
+                                                                                <input
+                                                                                    className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none
+                                                                                    ${savingId === key ? 'opacity-50' : ''}
+                                                                                    ${editingValues[key] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
+                                                                                    type="text"
+                                                                                    value={editingValues[key] !== undefined ? editingValues[key] : price.toFixed(2)}
+                                                                                    onChange={(e) => handlePriceChange(product.id, key, e.target.value)}
+                                                                                    onBlur={() => handlePriceBlur(product, 'thickness', thickness)}
+                                                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                                                />
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-4 pr-6 text-center">
+                                                                            {/* Optional: Add delete context for variants or keep empty */}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+
+                                                            {/* Variants: Types (Adesivo) */}
+                                                            {hasTypes && Object.keys(product.pricingConfig.pricesByType).map((type: string) => {
+                                                                const key = `${product.id}:subtype:${type}`;
+                                                                const price = product.pricingConfig.pricesByType[type];
+                                                                return (
+                                                                    <tr key={key} className="hover:bg-white/[0.02] transition-colors group">
+                                                                        <td className="p-4 pl-6">
+                                                                            <div className="flex items-center gap-2">
+                                                                                {/* Flattened display: Product Name + Type */}
+                                                                                <span className="text-white font-medium">{product.name} {type}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-4 text-right">
+                                                                            <div className="relative">
+                                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
+                                                                                <input
+                                                                                    className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none
+                                                                                    ${savingId === key ? 'opacity-50' : ''}
+                                                                                    ${editingValues[key] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
+                                                                                    type="text"
+                                                                                    value={editingValues[key] !== undefined ? editingValues[key] : price.toFixed(2)}
+                                                                                    onChange={(e) => handlePriceChange(product.id, key, e.target.value)}
+                                                                                    onBlur={() => handlePriceBlur(product, 'subtype', type)}
+                                                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                                                />
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-4 pr-6 text-center">
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>

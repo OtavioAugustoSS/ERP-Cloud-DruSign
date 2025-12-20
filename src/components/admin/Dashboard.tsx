@@ -5,7 +5,8 @@ import { Icons } from './Icons';
 import { getAllProducts } from '../../actions/product';
 import { formatCurrency } from '../../lib/utils/price';
 import { submitOrder } from '../../actions/order';
-import { Product } from '../../types';
+import { uploadFiles } from '@/actions/upload';
+import { Product, OrderInput } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Dashboard() {
@@ -28,7 +29,7 @@ export default function Dashboard() {
     const [quantity, setQuantity] = useState<number>(1);
 
     // Specific Fields
-    const [lonaServiceType, setLonaServiceType] = useState('Banner Promocional');
+    const [selectedServiceType, setSelectedServiceType] = useState('Banner Promocional');
     const [lonaFinishing, setLonaFinishing] = useState('Bainha e Ilhós');
     const [acrylicThickness, setAcrylicThickness] = useState('3mm');
 
@@ -69,7 +70,7 @@ export default function Dashboard() {
         const categories = Array.from(new Set(products.map(p => p.category)));
         // Optional: define a preferred order or sort alphabetically
         // We can force specific ones to start if they exist
-        const preferredOrder = ['Adesivo', 'Lona', 'ACM', 'Acrílico', 'PS', 'PVC'];
+        const preferredOrder = ['Adesivo', 'ADESIVO', 'Lona', 'LONA', 'ACM', 'Acrílico', 'ACRÍLICO', 'PS', 'PVC'];
 
         return categories.sort((a, b) => {
             const indexA = preferredOrder.indexOf(a);
@@ -109,8 +110,23 @@ export default function Dashboard() {
     // Calculate Effective Price per M2
     const effectivePricePerM2 = useMemo(() => {
         if (!selectedProduct) return 0;
+
+        // Handle Acrylic Pricing by Thickness
+        if ((activeCategory === 'Acrílico' || activeCategory === 'ACRÍLICO') &&
+            selectedProduct.pricingConfig?.pricesByThickness &&
+            selectedProduct.pricingConfig?.pricesByThickness[acrylicThickness]) {
+            return selectedProduct.pricingConfig.pricesByThickness[acrylicThickness];
+        }
+
+        // Handle Generic Subtype Pricing (e.g. Adesivo types)
+        if (selectedProduct.pricingConfig?.pricesByType &&
+            selectedServiceType &&
+            selectedProduct.pricingConfig.pricesByType[selectedServiceType]) {
+            return selectedProduct.pricingConfig.pricesByType[selectedServiceType];
+        }
+
         return selectedProduct.pricePerM2;
-    }, [selectedProduct]);
+    }, [selectedProduct, activeCategory, acrylicThickness]);
 
     const totalPrice = useMemo(() => {
         if (width <= 0 || height <= 0 || quantity <= 0) return 0;
@@ -133,7 +149,18 @@ export default function Dashboard() {
         }
 
         // Reset specific fields to defaults
-        setLonaServiceType('Banner Promocional');
+        setSelectedServiceType(''); // Reset generic type, will be populated by effect or user input
+        setLonaFinishing('Bainha e Ilhós'); // Default default handling
+
+        // Find if new category has subtypes and select first one
+        if (dataKey !== 'Acrílico') {
+            const productsInCat = products.filter(p => p.category === dataKey);
+            if (productsInCat.length > 0 && productsInCat[0].pricingConfig?.types?.length > 0) {
+                setSelectedServiceType(productsInCat[0].pricingConfig.types[0]);
+            } else if (dataKey === 'Lona' || dataKey === 'LONA') {
+                setSelectedServiceType('Banner Promocional');
+            }
+        }
         setLonaFinishing('Bainha e Ilhós');
         if (dataKey !== 'Acrílico') {
             // Only reset thickness if we aren't switching TO acrylic, 
@@ -199,34 +226,20 @@ export default function Dashboard() {
     };
 
     const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value.replace(/\D/g, ''); // Remove non-numbers
-        if (value.length > 14) value = value.slice(0, 14); // Limit to 14 digits (CNPJ)
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 14) value = value.slice(0, 14);
 
-        // Apply Mask
+        // CPF (11) or CNPJ (14) Mask
         if (value.length > 11) {
-            // CNPJ: XX.XXX.XXX/XXXX-XX
+            // CNPJ: 00.000.000/0000-00
             value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, '$1.$2.$3/$4-$5');
-        } else if (value.length > 8) {
-            // CNPJ Partial or CPF: XXX.XXX.XXX-XX
-            // Wait, we need to decide when to switch. 
-            // Often logic is: if length <= 11 use CPF mask, else use CNPJ.
-            // But while typing, it's ambiguous.
-            // Let's use standard progressive masking.
-        }
-
-        // Simpler approach for dual mask that works while typing:
-        if (value.length <= 11) {
-            // CPF: XXX.XXX.XXX-XX
-            value = value.replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-                .replace(/(-\d{2})\d+?$/, '$1'); // Capture only the first valid match
-        } else {
-            // CNPJ: XX.XXX.XXX/XXXX-XX
-            value = value.replace(/^(\d{2})(\d)/, '$1.$2')
-                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-                .replace(/\.(\d{3})(\d)/, '.$1/$2')
-                .replace(/(\d{4})(\d)/, '$1-$2');
+        } else if (value.length > 9) {
+            // CPF: 000.000.000-00
+            value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2}).*/, '$1.$2.$3-$4');
+        } else if (value.length > 6) {
+            value = value.replace(/^(\d{3})(\d{3})(\d{0,3}).*/, '$1.$2.$3');
+        } else if (value.length > 3) {
+            value = value.replace(/^(\d{3})(\d{0,3}).*/, '$1.$2');
         }
 
         setClientDocument(value);
@@ -257,28 +270,49 @@ export default function Dashboard() {
         let finalFinishing: string | undefined = undefined;
         let finalInstructions = instructions;
 
-        if (activeCategory === 'Lona') {
-            finalServiceType = lonaServiceType;
+        if (activeCategory === 'Lona' || activeCategory === 'LONA') {
+            finalServiceType = selectedServiceType;
             finalFinishing = lonaFinishing;
-        } else if (activeCategory === 'Acrílico') {
+        } else if (activeCategory === 'Acrílico' || activeCategory === 'ACRÍLICO') {
             finalServiceType = 'Corte Router/Laser';
-            // Save thickness in finishing instead of instructions
+            // Save thickness in finishing field instead of instructions
             finalFinishing = `Espessura: ${acrylicThickness}`;
+            finalInstructions = instructions;
+        } else if (selectedServiceType) {
+            // For others like Adesivo
+            finalServiceType = selectedServiceType;
         }
         // For Adesivo, PS, CM, we rely on the Product Name itself, no extra service type needed unless specified.
 
-        // Files are handled via previewUrls, no need to append names to instructions.
+
+        // Handle File Uploads
+        let uploadedPaths: string[] = [];
+        if (files.length > 0) {
+            const formData = new FormData();
+            files.forEach(file => formData.append('files', file));
+
+            setNotification({ message: "Enviando arquivos...", type: 'success' });
+            const uploadResult = await uploadFiles(formData);
+
+            if (uploadResult.success && uploadResult.filePaths) {
+                uploadedPaths = uploadResult.filePaths;
+            } else {
+                setNotification({ message: "Erro ao enviar arquivos", type: 'error' });
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
 
         // Generate a session-based preview URL if a file is present
         const previewUrl = files.length > 0 ? URL.createObjectURL(files[0]) : undefined;
-        // Generate URLs for all files
-        const previewUrls = files.length > 0 ? files.map(f => URL.createObjectURL(f)) : undefined;
 
         try {
             const orderData: OrderInput = {
-                clientName: isEmployee ? 'Cliente Balcão' : clientName, // Fallback for employee view
+                clientName: isEmployee ? 'Cliente Balcão' : (clientName || 'Cliente'), // Explicit default if empty
                 clientPhone: isEmployee ? undefined : clientPhone,
                 clientDocument: isEmployee ? undefined : clientDocument,
+                filePaths: uploadedPaths,
                 productName: selectedProduct?.name || 'Produto Personalizado',
                 width,
                 height,
@@ -288,8 +322,7 @@ export default function Dashboard() {
                 serviceType: finalServiceType,
                 finishing: finalFinishing,
                 instructions: finalInstructions,
-                previewUrl: previewUrl,
-                previewUrls: previewUrls
+                previewUrl: previewUrl
             };
 
             const result = await submitOrder(orderData);
@@ -299,8 +332,8 @@ export default function Dashboard() {
                 setInstructions(''); // Clear instructions
                 setFiles([]); // Clear files
                 setClientName(''); // Clear client name
-                setClientPhone(''); // Clear client phone
-                setClientDocument(''); // Clear client document
+                setClientPhone('');
+                setClientDocument('');
                 // Reset dimensions for next order
                 setWidth(0);
                 setHeight(0);
@@ -371,7 +404,7 @@ export default function Dashboard() {
                                 </div>
 
                                 <div className="p-5 md:p-8 space-y-8">
-                                    {/* Client Name, Phone, Document (Admin Only) */}
+                                    {/* Client Name & Phone Input (Admin Only) */}
                                     {!isEmployee && (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="flex-1">
@@ -380,7 +413,7 @@ export default function Dashboard() {
                                                     type="text"
                                                     value={clientName}
                                                     onChange={(e) => setClientName(e.target.value)}
-                                                    placeholder="Nome do cliente..."
+                                                    placeholder="Digite o nome..."
                                                     className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
                                                 />
                                             </div>
@@ -402,7 +435,6 @@ export default function Dashboard() {
                                                     value={clientDocument}
                                                     onChange={handleDocumentChange}
                                                     placeholder="000.000.000-00"
-                                                    maxLength={18} // CNPJ formatted length
                                                     className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none placeholder-slate-600"
                                                 />
                                             </div>
@@ -436,10 +468,57 @@ export default function Dashboard() {
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                                            {/* 1. Tipo de Material (Selection) */}
-                                            {!['Acrílico', 'ACM', 'PS', 'PVC'].includes(activeCategory) && (
-                                                <div className="md:col-span-2 flex flex-col gap-2">
+                                            {/* 1. Unified Material Selection (Product + Type) - EXCLUDING LONA */}
+                                            {!['Acrílico', 'ACRÍLICO', 'ACM', 'PS', 'PVC', 'Lona', 'LONA'].includes(activeCategory) && (
+                                                <div className="flex flex-col gap-2">
                                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo de Material</label>
+                                                    <div className="relative">
+                                                        <select
+                                                            value={
+                                                                selectedServiceType && selectedProduct?.pricingConfig?.types?.includes(selectedServiceType)
+                                                                    ? `${selectedProductId}:${selectedServiceType}`
+                                                                    : selectedProductId
+                                                            }
+                                                            onChange={(e) => {
+                                                                const [newProdId, newType] = e.target.value.split(':');
+                                                                setSelectedProductId(newProdId);
+                                                                if (newType) {
+                                                                    setSelectedServiceType(newType);
+                                                                } else {
+                                                                    if (activeCategory !== 'Lona' && activeCategory !== 'LONA') {
+                                                                        setSelectedServiceType('');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
+                                                        >
+                                                            {categoryProducts.flatMap(p => {
+                                                                if (p.pricingConfig?.types && p.pricingConfig.types.length > 0) {
+                                                                    return p.pricingConfig.types.map(type => (
+                                                                        <option key={`${p.id}:${type}`} value={`${p.id}:${type}`} className="bg-slate-900 text-white">
+                                                                            {p.name} {type}
+                                                                        </option>
+                                                                    ));
+                                                                }
+                                                                return (
+                                                                    <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                                                                        {p.name}
+                                                                    </option>
+                                                                );
+                                                            })}
+                                                            {categoryProducts.length === 0 && <option disabled className="bg-slate-900 text-white">Sem produtos nesta categoria</option>}
+                                                        </select>
+                                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                                            <Icons.ChevronDown size={18} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 1.1 LONA Material Selection (Product Only) */}
+                                            {(activeCategory === 'Lona' || activeCategory === 'LONA') && (
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Material</label>
                                                     <div className="relative">
                                                         <select
                                                             value={selectedProductId}
@@ -447,9 +526,10 @@ export default function Dashboard() {
                                                             className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                         >
                                                             {categoryProducts.map(p => (
-                                                                <option key={p.id} value={p.id} className="bg-slate-900 text-white">{p.name}</option>
+                                                                <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                                                                    {p.name}
+                                                                </option>
                                                             ))}
-                                                            {categoryProducts.length === 0 && <option disabled className="bg-slate-900 text-white">Sem produtos nesta categoria</option>}
                                                         </select>
                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                             <Icons.ChevronDown size={18} />
@@ -461,18 +541,19 @@ export default function Dashboard() {
                                             {/* 2. Specific Fields based on Category */}
 
                                             {/* CASE: LONA */}
-                                            {activeCategory === 'Lona' && (
+                                            {(activeCategory === 'Lona' || activeCategory === 'LONA') && (
                                                 <>
                                                     <div className="flex flex-col gap-2">
                                                         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tipo de Serviço</label>
                                                         <div className="relative">
                                                             <select
-                                                                value={lonaServiceType}
-                                                                onChange={(e) => setLonaServiceType(e.target.value)}
+                                                                value={selectedServiceType}
+                                                                onChange={(e) => setSelectedServiceType(e.target.value)}
                                                                 className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                             >
-                                                                <option value="Banner Promocional" className="bg-slate-900 text-white">Banner Promocional</option>
-                                                                <option value="Grandes Formatos" className="bg-slate-900 text-white">Grandes Formatos</option>
+                                                                {(['Banner', 'Grandes Formatos']).map((type: string) => (
+                                                                    <option key={type} value={type} className="bg-slate-900 text-white">{type}</option>
+                                                                ))}
                                                             </select>
                                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                                 <Icons.ChevronDown size={18} />
@@ -487,9 +568,9 @@ export default function Dashboard() {
                                                                 onChange={(e) => setLonaFinishing(e.target.value)}
                                                                 className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                             >
-                                                                <option value="Bainha e Ilhós" className="bg-slate-900 text-white">Bainha e Ilhós</option>
-                                                                <option value="Bastão e Corda" className="bg-slate-900 text-white">Bastão e Corda</option>
-                                                                <option value="Sem Acabamento" className="bg-slate-900 text-white">Sem Acabamento</option>
+                                                                {(['Bainha e Ilhós', 'Bastão e Corda', 'Sem Acabamento']).map((opt: string) => (
+                                                                    <option key={opt} value={opt} className="bg-slate-900 text-white">{opt}</option>
+                                                                ))}
                                                             </select>
                                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                                 <Icons.ChevronDown size={18} />
@@ -500,7 +581,8 @@ export default function Dashboard() {
                                             )}
 
                                             {/* CASE: ACRÍLICO */}
-                                            {activeCategory === 'Acrílico' && (
+                                            {/* CASE: ACRÍLICO */}
+                                            {(activeCategory === 'Acrílico' || activeCategory === 'ACRÍLICO') && (
                                                 <div className="md:col-span-2 flex flex-col gap-2">
                                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Espessura</label>
                                                     <div className="relative">
@@ -509,15 +591,14 @@ export default function Dashboard() {
                                                             onChange={(e) => setAcrylicThickness(e.target.value)}
                                                             className="w-full h-12 rounded-lg bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
                                                         >
-                                                            {categoryProducts
-                                                                .map(p => p.name.replace('Acrílico ', ''))
-                                                                .sort((a, b) => parseInt(a) - parseInt(b))
-                                                                .map(thickness => (
-                                                                    <option key={thickness} value={thickness} className="bg-slate-900 text-white">
-                                                                        {thickness}
-                                                                    </option>
-                                                                ))}
-                                                            {categoryProducts.length === 0 && <option disabled className="bg-slate-900 text-white">Sem espessuras disponíveis</option>}
+                                                            {(selectedProduct?.pricingConfig?.thicknessOptions || []).map((thickness: string) => (
+                                                                <option key={thickness} value={thickness} className="bg-slate-900 text-white">
+                                                                    {thickness}
+                                                                </option>
+                                                            ))}
+                                                            {(!selectedProduct?.pricingConfig?.thicknessOptions || selectedProduct.pricingConfig.thicknessOptions.length === 0) && (
+                                                                <option disabled className="bg-slate-900 text-white">Sem espessuras disponíveis</option>
+                                                            )}
                                                         </select>
                                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                                             <Icons.ChevronDown size={18} />
@@ -633,13 +714,22 @@ export default function Dashboard() {
                                                                     <span className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB • PDF</span>
                                                                 </div>
                                                             </div>
-                                                            <button
-                                                                onClick={() => removeFile(idx)}
-                                                                className="size-8 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors"
-                                                                title="Remover arquivo"
-                                                            >
-                                                                <Icons.Trash size={16} />
-                                                            </button>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => window.open(URL.createObjectURL(file), '_blank')}
+                                                                    className="size-8 rounded-full hover:bg-white/10 text-slate-500 hover:text-primary flex items-center justify-center transition-colors"
+                                                                    title="Visualizar arquivo"
+                                                                >
+                                                                    <Icons.Eye size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => removeFile(idx)}
+                                                                    className="size-8 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-500 flex items-center justify-center transition-colors"
+                                                                    title="Remover arquivo"
+                                                                >
+                                                                    <Icons.Trash size={16} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -680,7 +770,9 @@ export default function Dashboard() {
                                         <div className="flex justify-between items-start text-sm group">
                                             <span className="text-slate-400">Material</span>
                                             <span className="text-white font-medium text-right group-hover:text-primary transition-colors">
-                                                {selectedProduct ? selectedProduct.name : 'Selecione...'}
+                                                {selectedProduct
+                                                    ? `${selectedProduct.name} ${selectedServiceType && activeCategory !== 'Lona' && activeCategory !== 'LONA' ? selectedServiceType : ''}`
+                                                    : 'Selecione...'}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-start text-sm">
@@ -689,14 +781,20 @@ export default function Dashboard() {
                                         </div>
 
                                         {/* Dynamic Summary Fields */}
-                                        {activeCategory === 'Lona' && (
+                                        {/* Dynamic Finishing/Type Display in Summary */}
+                                        {(activeCategory === 'Lona' || activeCategory === 'LONA') && selectedServiceType && (
                                             <div className="flex justify-between items-start text-sm">
-                                                <span className="text-slate-400">Acabamento</span>
-                                                <span className="text-white text-right">{lonaFinishing}</span>
+                                                <span className="text-slate-400">Tipo</span>
+                                                <span className="text-white text-right text-xs max-w-[150px]">{selectedServiceType}</span>
                                             </div>
                                         )}
-
-                                        {activeCategory === 'Acrílico' && (
+                                        {((activeCategory === 'Lona' || activeCategory === 'LONA') && lonaFinishing) && (
+                                            <div className="flex justify-between items-start text-sm">
+                                                <span className="text-slate-400">Acabamento</span>
+                                                <span className="text-white text-right text-xs max-w-[150px]">{lonaFinishing}</span>
+                                            </div>
+                                        )}
+                                        {((activeCategory === 'Acrílico' || activeCategory === 'ACRÍLICO') && acrylicThickness) && (
                                             <div className="flex justify-between items-start text-sm">
                                                 <span className="text-slate-400">Espessura</span>
                                                 <span className="text-white text-right font-mono">{acrylicThickness}</span>

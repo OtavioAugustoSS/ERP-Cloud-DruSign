@@ -3,6 +3,7 @@
 import { updateOrderStatus } from '@/actions/order';
 import { Package, Clock, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { OrderStatus } from '@/types';
 
 interface OrderListClientProps {
     initialOrders: any[];
@@ -11,7 +12,7 @@ interface OrderListClientProps {
 
 export default function OrderListClient({ initialOrders, isHistory }: OrderListClientProps) {
 
-    const handleStatusMove = async (orderId: string, newStatus: 'PENDING' | 'IN_PRODUCTION' | 'COMPLETED') => {
+    const handleStatusMove = async (orderId: string, newStatus: OrderStatus) => {
         if (confirm('Tem certeza que deseja alterar o status deste pedido?')) {
             await updateOrderStatus(orderId, newStatus);
         }
@@ -55,17 +56,17 @@ export default function OrderListClient({ initialOrders, isHistory }: OrderListC
 
                         {!isHistory ? (
                             <div className="flex gap-2">
-                                {order.status === 'PENDING' && (
+                                {order.status === OrderStatus.PENDING && (
                                     <button
-                                        onClick={() => handleStatusMove(order.id, 'IN_PRODUCTION')}
+                                        onClick={() => handleStatusMove(order.id, OrderStatus.IN_PRODUCTION)}
                                         className="bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors"
                                     >
                                         Iniciar Produção <ArrowRight size={14} />
                                     </button>
                                 )}
-                                {order.status === 'IN_PRODUCTION' && (
+                                {order.status === OrderStatus.IN_PRODUCTION && (
                                     <button
-                                        onClick={() => handleStatusMove(order.id, 'COMPLETED')}
+                                        onClick={() => handleStatusMove(order.id, OrderStatus.COMPLETED)}
                                         className="bg-green-600/20 hover:bg-green-600/30 text-green-400 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors"
                                     >
                                         Concluir <CheckCircle size={14} />
@@ -74,7 +75,7 @@ export default function OrderListClient({ initialOrders, isHistory }: OrderListC
                             </div>
                         ) : (
                             <button
-                                onClick={() => handleStatusMove(order.id, 'PENDING')}
+                                onClick={() => handleStatusMove(order.id, OrderStatus.PENDING)}
                                 className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors"
                             >
                                 <ArrowLeft size={14} /> Reabrir
