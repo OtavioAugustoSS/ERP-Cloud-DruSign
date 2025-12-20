@@ -94,6 +94,10 @@ export default function Orders() {
                             <span className="size-2 rounded-full bg-blue-500"></span>
                             {orders.filter(o => o.status === OrderStatus.IN_PRODUCTION).length} Em Prod.
                         </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/5 border border-green-500/10 text-xs text-green-500">
+                            <span className="size-2 rounded-full bg-green-500"></span>
+                            {orders.filter(o => o.status === OrderStatus.READY_FOR_SHIPPING).length} Pronto p/ Envio
+                        </div>
                     </div>
                 </div>
 
@@ -182,6 +186,7 @@ export default function Orders() {
                 isOpen={isDetailsOpen}
                 onClose={() => setIsDetailsOpen(false)}
                 order={selectedOrder}
+                onUpdate={refreshOrders}
             />
         </div>
     );
