@@ -23,7 +23,7 @@ model User {
   
   // Relacionamentos
   actions   Log[]    // Histórico de ações desse usuário
-  notifications Notification[]
+
 }
 
 // ------------------------------
@@ -84,6 +84,9 @@ model Order {
   items         OrderItem[]
 }
 
+
+
+
 model OrderItem {
   id           String  @id @default(uuid())
   orderId      String
@@ -104,17 +107,12 @@ model OrderItem {
 // 5. Sistema de Notificações (Novo)
 // ------------------------------
 model Notification {
-  id        String   @id @default(uuid())
-  
-  userId    String   // Quem recebe a notificação
-  user      User     @relation(fields: [userId], references: [id])
-  
-  title     String
-  message   String
-  read      Boolean  @default(false)
-  type      String   // "NEW_REQUEST", "ORDER_ASSIGNED", "SYSTEM"
-  
-  timestamp DateTime @default(now())
+  id            String   @id @default(uuid())
+  recipientRole String   // "admin" or "employee"
+  message       String
+  read          Boolean  @default(false)
+  orderId       String?
+  createdAt     DateTime @default(now())
 }
 
 // ------------------------------

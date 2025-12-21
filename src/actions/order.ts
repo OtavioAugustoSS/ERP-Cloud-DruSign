@@ -171,12 +171,32 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
     }
 };
 
+import { createNotification } from './notification';
+
 export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<{ success: boolean }> => {
     try {
-        await prisma.order.update({
+        const order = await prisma.order.update({
             where: { id },
-            data: { status }
+            data: { status },
+            include: { items: { include: { product: true } } }
         });
+
+        const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        if (status === 'IN_PRODUCTION') {
+            await createNotification(
+                'employee',
+                `Novo serviço em produção (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
+                id
+            );
+        } else if (status === 'READY_FOR_SHIPPING') {
+            await createNotification(
+                'admin',
+                `Serviço concluído (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'} está pronto para envio.`,
+                id
+            );
+        }
+
         return { success: true };
     } catch (error) {
         console.error("Error updating order status:", error);
