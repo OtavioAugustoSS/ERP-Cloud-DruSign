@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Icons } from './Icons';
+import NotificationBell from './NotificationBell';
 import { useAuth } from '../../context/AuthContext';
 import OrderDetailsModal from './OrderDetailsModal';
 import { getPendingOrders, updateOrderStatus } from '../../actions/order';
@@ -97,6 +98,9 @@ export default function Orders() {
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/5 border border-green-500/10 text-xs text-green-500">
                             <span className="size-2 rounded-full bg-green-500"></span>
                             {orders.filter(o => o.status === OrderStatus.READY_FOR_SHIPPING).length} Pronto p/ Envio
+                        </div>
+                        <div className="ml-4 pl-4 border-l border-white/10">
+                            <NotificationBell />
                         </div>
                     </div>
                 </div>

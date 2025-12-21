@@ -1,4 +1,5 @@
 import { Bell } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 export default function AdminHeader() {
     return (
@@ -20,10 +21,7 @@ export default function AdminHeader() {
             </div>
 
             <div className="flex items-center gap-4">
-                <button className="relative p-2 text-text-secondary hover:text-white transition-colors">
-                    <Bell size={20} />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-background-dark"></span>
-                </button>
+                <NotificationBell />
                 <div className="h-6 w-px bg-white/10"></div>
                 <button className="text-sm font-medium text-text-secondary hover:text-white transition-colors">
                     Sair

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icons } from './Icons';
+import NotificationBell from './NotificationBell';
 import { getAllProducts } from '../../actions/product';
 import { formatCurrency } from '../../lib/utils/price';
 import { submitOrder } from '../../actions/order';
@@ -364,10 +365,7 @@ export default function Dashboard() {
                             <p className="text-xs text-primary uppercase tracking-wider font-semibold">Data de Hoje</p>
                             <p className="text-white font-mono">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                         </div>
-                        <button className="size-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-white hover:bg-white/10 transition-colors relative">
-                            <Icons.Bell size={20} />
-                            <span className="absolute top-2 right-2 size-2 bg-primary rounded-full"></span>
-                        </button>
+                        <NotificationBell />
                     </div>
                 </div>
             </header>
