@@ -96,5 +96,6 @@ export const Icons = {
     ExternalLink: Link,
     FileText: FileText,
     Edit: Pencil,
-    Ban: Ban
+    Ban: Ban,
+    X: X
 };

@@ -18,6 +18,7 @@ model User {
   password  String   // Senha criptografada (Hash)
   role      String   @default("employee") // "admin" ou "employee"
   phone     String?  // Contato do usuário
+  image     String?  // Foto do perfil
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
