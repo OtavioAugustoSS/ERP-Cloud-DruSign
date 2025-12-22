@@ -3,33 +3,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types/auth';
 import { useRouter } from 'next/navigation';
+import { login as loginAction } from '../actions/auth';
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string) => Promise<boolean>;
+    login: (email: string, password: string) => Promise<any>;
     logout: () => void;
     isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock Users
-const MOCK_USERS: User[] = [
-    {
-        id: 'user-admin',
-        name: 'Administrador',
-        email: 'admin@drusign.com',
-        role: 'admin',
-        phone: '11999999999'
-    },
-    {
-        id: 'user-employee',
-        name: 'Equipe de Vendas',
-        email: 'equipe@drusign.com',
-        role: 'employee',
-        phone: '11888888888'
-    }
-];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -40,29 +23,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check local storage on mount
         const storedUser = localStorage.getItem('drusign_user');
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user from local storage");
+                localStorage.removeItem('drusign_user');
+            }
         }
         setIsLoading(false);
     }, []);
 
-    const login = async (email: string): Promise<boolean> => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
+    const login = async (email: string, password: string): Promise<any> => {
+        setIsLoading(true);
+        try {
+            // Call Server Action
+            const result = await loginAction(email, password);
 
-        const foundUser = MOCK_USERS.find(u => u.email === email);
+            if (result?.user) {
+                setUser(result.user);
+                // We keep localStorage for client-side persistence of USER DETAILS only.
+                // The actual session is handled by the HttpOnly cookie set by the server action.
+                localStorage.setItem('drusign_user', JSON.stringify(result.user));
+                return result;
+            }
 
-        if (foundUser) {
-            setUser(foundUser);
-            localStorage.setItem('drusign_user', JSON.stringify(foundUser));
-            return true;
+            return result; // contains error
+        } catch (error) {
+            console.error("AuthContext Login Error:", error);
+            return { error: "Erro inesperado ao fazer login." };
+        } finally {
+            setIsLoading(false);
         }
-
-        return false;
     };
 
     const logout = () => {
         setUser(null);
         localStorage.removeItem('drusign_user');
+        // Force clear cookie client-side if possible (mostly for dev/ui feedback)
+        // The server should handle this on a real logout route
+        document.cookie = "session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
         router.push('/login');
     };
 

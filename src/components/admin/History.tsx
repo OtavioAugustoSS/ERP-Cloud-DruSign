@@ -149,21 +149,13 @@ export default function History() {
                                         </td>
                                         <td className="p-4 pr-6 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {order.status === OrderStatus.CANCELLED ? (
-                                                    <button className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all" title="Ver Motivo">
-                                                        <Icons.Info size={18} />
-                                                    </button>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleOpenDetails(order)}
-                                                            className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all"
-                                                            title="Ver Detalhes"
-                                                        >
-                                                            <Icons.Visibility size={18} />
-                                                        </button>
-                                                    </>
-                                                )}
+                                                <button
+                                                    onClick={() => handleOpenDetails(order)}
+                                                    className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                                                    title="Ver Detalhes"
+                                                >
+                                                    <Icons.Visibility size={18} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>

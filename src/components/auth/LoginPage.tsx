@@ -20,11 +20,11 @@ export default function LoginPage() {
         setIsSubmitting(true);
 
         try {
-            const success = await login(email);
-            if (success) {
-                router.push('/');
+            const result = await login(email, password);
+            if (result?.error) {
+                setError(result.error);
             } else {
-                setError('Email não encontrado. Tente admin@drusign.com ou equipe@drusign.com');
+                router.push('/admin/dashboard'); // Or home, but admin dashboard is safer for this app
             }
         } catch (err) {
             setError('Ocorreu um erro ao fazer login');
