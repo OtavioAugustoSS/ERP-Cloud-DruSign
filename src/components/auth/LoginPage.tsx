@@ -1,118 +1,120 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { Icons } from '../admin/Icons';
+import { useState, FormEvent } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { Loader2, Eye, EyeOff, Lock, User } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const { login, isLoading } = useAuth();
 
-    const { login } = useAuth();
-    const router = useRouter();
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setError('');
-        setIsSubmitting(true);
-
-        try {
-            const result = await login(email, password);
-            if (result?.error) {
-                setError(result.error);
-            } else {
-                router.push('/admin/dashboard'); // Or home, but admin dashboard is safer for this app
-            }
-        } catch (err) {
-            setError('Ocorreu um erro ao fazer login');
-        } finally {
-            setIsSubmitting(false);
-        }
+        await login(username, password);
     };
 
     return (
-        <div className="min-h-screen bg-background-dark flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                {/* Logo / Header */}
-                <div className="text-center mb-8">
-                    <div className="w-48 h-48 mx-auto mb-6 relative rounded-full overflow-hidden border-4 border-primary/20 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
-                        <img
-                            src="/logo.png"
-                            alt="DruSign Logo"
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+        <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black text-white">
+            {/* Background Image com Zoom Lento */}
+            <div className="absolute inset-0 z-0">
+                <div className="relative w-full h-full animate-slow-zoom">
+                    <Image
+                        src="/background-login.png"
+                        alt="Background"
+                        fill
+                        className="object-cover opacity-40"
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                </div>
+            </div>
+
+            {/* Card de Login Glassmorphism */}
+            <div className="relative z-10 w-full max-w-md p-8 mx-4 space-y-8 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800/50 rounded-2xl shadow-2xl shadow-blue-900/20">
+
+                <div className="text-center space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-white">
+                        Bem-vindo
+                    </h1>
+                    <p className="text-sm text-zinc-400">
+                        Entre na sua conta para continuar
+                    </p>
                 </div>
 
-                {/* Login Card */}
-                <div className="bg-surface-dark border border-white/5 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-sm">
-                    <div className="p-8">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {error && (
-                                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-3">
-                                    <Icons.Alert className="text-red-500 shrink-0 mt-0.5" size={16} />
-                                    <p className="text-red-400 text-sm">{error}</p>
-                                </div>
-                            )}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium uppercase tracking-wider text-zinc-500 ml-1">
+                            Usuário
+                        </label>
+                        <div className="relative group">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors">
+                                <User size={20} />
+                            </div>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full bg-black/50 border border-zinc-800 text-white rounded-xl py-3 pl-10 pr-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                                placeholder="Digite seu usuário"
+                                required
+                            />
+                        </div>
+                    </div>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block ml-1">Email</label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
-                                        <Icons.Description size={18} />
-                                    </div>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="seu@email.com"
-                                        className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm pl-11 pr-4 focus:ring-1 focus:ring-primary transition-all outline-none"
-                                        required
-                                    />
-                                </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium uppercase tracking-wider text-zinc-500 ml-1">
+                            Senha
+                        </label>
+                        <div className="relative group">
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-500 transition-colors">
+                                <Lock size={20} />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block ml-1">Senha</label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
-                                        <Icons.Check size={18} />
-                                    </div>
-                                    <input
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="••••••••"
-                                        className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm pl-11 pr-4 focus:ring-1 focus:ring-primary transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-black/50 border border-zinc-800 text-white rounded-xl py-3 pl-10 pr-12 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-zinc-600"
+                                placeholder="••••••••"
+                                required
+                            />
 
                             <button
-                                type="submit"
-                                disabled={isSubmitting} // Corrected
-                                className="w-full h-12 bg-primary hover:bg-primary/90 text-background-dark font-bold rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors p-1"
                             >
-                                {isSubmitting ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-background-dark/30 border-t-background-dark rounded-full animate-spin" />
-                                        <span>Entrando...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>Entrar</span>
-                                        <Icons.ArrowRight size={18} />
-                                    </>
-                                )}
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
-                        </form>
+                        </div>
                     </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 transform active:scale-[0.98] shadow-lg shadow-blue-900/20 disabled:opacity-50 flex items-center justify-center gap-2 group"
+                    >
+                        {isLoading ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <>
+                                Entrar
+                                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </>
+                        )}
+                    </button>
+                </form>
+
+                <div className="text-center">
+                    <p className="text-xs text-zinc-600">
+                        &copy; {new Date().getFullYear()} DruSign.
+                    </p>
                 </div>
-
-
             </div>
         </div>
     );

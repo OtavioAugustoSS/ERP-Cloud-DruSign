@@ -9,6 +9,15 @@ const config: Config = {
     ],
     theme: {
         extend: {
+            animation: {
+                'slow-zoom': 'zoom 20s ease-in-out infinite alternate',
+            },
+            keyframes: {
+                zoom: {
+                    '0%': { transform: 'scale(1)' },
+                    '100%': { transform: 'scale(1.1)' },
+                },
+            },
             colors: {
                 primary: "#22d3ee", // Cyan 400
                 "primary-hover": "#06b6d4", // Cyan 500
