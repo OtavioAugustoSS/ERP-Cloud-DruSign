@@ -3,14 +3,20 @@
 import React, { useEffect, useState } from 'react';
 import { Icons } from './Icons';
 import { getAllProducts, updateProductPricing, createProduct, deleteProduct } from '../../actions/product';
-import { Product } from '../../types';
-import { formatCurrency } from '../../lib/utils/price';
+import { getSystemSettings, updateSystemSettings } from '../../actions/system';
+import { Product, SystemSettings } from '../../types';
 
 export default function Settings() {
+    // --- PRODUCT STATE ---
     const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loadingProducts, setLoadingProducts] = useState(true);
     const [editingValues, setEditingValues] = useState<{ [key: string]: string }>({});
     const [savingId, setSavingId] = useState<string | null>(null);
+
+    // --- SETTINGS STATE ---
+    const [settings, setSettings] = useState<SystemSettings | null>(null);
+    const [loadingSettings, setLoadingSettings] = useState(true);
+    const [savingSettings, setSavingSettings] = useState(false);
 
     // Add Product Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -21,29 +27,55 @@ export default function Settings() {
     const [isSavingNew, setIsSavingNew] = useState(false);
 
     useEffect(() => {
-        loadProducts();
+        loadData();
     }, []);
 
-    const loadProducts = async () => {
-        setLoading(true);
-        const data = await getAllProducts();
-        setProducts(data);
-        setLoading(false);
+    const loadData = async () => {
+        setLoadingProducts(true);
+        setLoadingSettings(true);
+
+        const [pData, sData] = await Promise.all([
+            getAllProducts(),
+            getSystemSettings()
+        ]);
+
+        setProducts(pData);
+        setSettings(sData);
+
+        setLoadingProducts(false);
+        setLoadingSettings(false);
     };
 
+    // --- SETTINGS HANDLERS ---
+    const handleSaveSettings = async () => {
+        if (!settings) return;
+        setSavingSettings(true);
+
+        const result = await updateSystemSettings(settings);
+
+        if (result.success) {
+            // Optional: Show toast
+            // alert('Configurações salvas!');
+        } else {
+            alert('Erro ao salvar.');
+        }
+        setSavingSettings(false);
+    };
+
+    const handleSettingChange = (field: keyof SystemSettings, value: string) => {
+        if (!settings) return;
+        setSettings({ ...settings, [field]: value });
+    };
+
+    // --- PRODUCT HANDLERS ---
     const handlePriceChange = (id: string, key: string, value: string) => {
-        // key is unique identifier for the field (e.g., productID for base, or productID:subtype:Fosco)
-        setEditingValues(prev => ({
-            ...prev,
-            [key]: value
-        }));
+        setEditingValues(prev => ({ ...prev, [key]: value }));
     };
 
     const handlePriceBlur = async (product: Product, priceType: 'base' | 'thickness' | 'subtype', variantKey?: string) => {
         const key = variantKey ? `${product.id}:${priceType}:${variantKey}` : product.id;
         const valueStr = editingValues[key];
-
-        if (valueStr === undefined) return; // No change
+        if (valueStr === undefined) return;
 
         const normalizedValue = valueStr.replace(',', '.');
         const newPrice = parseFloat(normalizedValue);
@@ -63,21 +95,12 @@ export default function Settings() {
         if (priceType === 'base') {
             result = await updateProductPricing(product.id, newPrice, product.pricingConfig);
         } else {
-            // Update nested config
             const newConfig = { ...product.pricingConfig };
-
             if (priceType === 'thickness') {
-                newConfig.pricesByThickness = {
-                    ...(newConfig.pricesByThickness || {}),
-                    [variantKey!]: newPrice
-                };
+                newConfig.pricesByThickness = { ...(newConfig.pricesByThickness || {}), [variantKey!]: newPrice };
             } else if (priceType === 'subtype') {
-                newConfig.pricesByType = {
-                    ...(newConfig.pricesByType || {}),
-                    [variantKey!]: newPrice
-                };
+                newConfig.pricesByType = { ...(newConfig.pricesByType || {}), [variantKey!]: newPrice };
             }
-
             result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
         }
 
@@ -94,14 +117,9 @@ export default function Settings() {
 
     const handleCreateProduct = async () => {
         if (!newProductName || !newProductCategory || !newProductPrice) return;
-
         setIsSavingNew(true);
         const price = parseFloat(newProductPrice.replace(',', '.'));
-
-        if (isNaN(price)) {
-            setIsSavingNew(false);
-            return;
-        }
+        if (isNaN(price)) { setIsSavingNew(false); return; }
 
         const result = await createProduct({
             name: newProductName,
@@ -112,66 +130,38 @@ export default function Settings() {
         if (result.success && result.product) {
             setProducts(prev => [...prev, result.product!]);
             setIsAddModalOpen(false);
-            setNewProductName('');
-            setNewProductCategory('');
-            setNewProductPrice('');
+            setNewProductName(''); setNewProductCategory(''); setNewProductPrice('');
             setIsCreatingCategory(false);
         }
         setIsSavingNew(false);
     };
 
     const handleDeleteProduct = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja excluir questo produto?')) return;
-
+        if (!window.confirm('Excluir produto?')) return;
         const result = await deleteProduct(id);
-        if (result.success) {
-            setProducts(prev => prev.filter(p => p.id !== id));
-        }
+        if (result.success) setProducts(prev => prev.filter(p => p.id !== id));
     };
 
     const handleDeleteVariant = async (product: Product, type: 'thickness' | 'subtype', variantKey: string) => {
-        if (!window.confirm(`Tem certeza que deseja excluir a variação "${variantKey}"?`)) return;
-
+        if (!window.confirm(`Excluir variação "${variantKey}"?`)) return;
         const newConfig = { ...product.pricingConfig };
-
         if (type === 'thickness') {
-            // Remove from pricing map
-            if (newConfig.pricesByThickness) {
-                const { [variantKey]: _, ...rest } = newConfig.pricesByThickness;
-                newConfig.pricesByThickness = rest;
-            }
-            // Remove from options array
-            if (newConfig.thicknessOptions) {
-                newConfig.thicknessOptions = newConfig.thicknessOptions.filter((t: string) => t !== variantKey);
-            }
+            if (newConfig.pricesByThickness) { const { [variantKey]: _, ...rest } = newConfig.pricesByThickness; newConfig.pricesByThickness = rest; }
+            if (newConfig.thicknessOptions) newConfig.thicknessOptions = newConfig.thicknessOptions.filter((t: string) => t !== variantKey);
         } else if (type === 'subtype') {
-            // Remove from pricing map
-            if (newConfig.pricesByType) {
-                const { [variantKey]: _, ...rest } = newConfig.pricesByType;
-                newConfig.pricesByType = rest;
-            }
+            if (newConfig.pricesByType) { const { [variantKey]: _, ...rest } = newConfig.pricesByType; newConfig.pricesByType = rest; }
         }
-
-        // Call update API
         const result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
-
-        if (result.success && result.product) {
-            setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
-        }
+        if (result.success && result.product) setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
     };
 
     const getProductIcon = (category: string) => {
         switch (category) {
             case 'Lona': return <Icons.Texture className="text-white/50" size={18} />;
-            case 'Vinil':
-            case 'Adesivo': return <Icons.Layers className="text-white/50" size={18} />;
+            case 'Vinil': case 'Adesivo': return <Icons.Layers className="text-white/50" size={18} />;
             case 'Tecido': return <Icons.Grid className="text-white/50" size={18} />;
             case 'Papel': return <Icons.Scanner className="text-white/50" size={18} />;
-            case 'ACM':
-            case 'Rígido':
-            case 'PS':
-            case 'PVC':
-            case 'Acrílico': return <Icons.Panel className="text-white/50" size={18} />;
+            case 'ACM': case 'Rígido': case 'PS': case 'PVC': case 'Acrílico': return <Icons.Panel className="text-white/50" size={18} />;
             default: return <Icons.Texture className="text-white/50" size={18} />;
         }
     };
@@ -181,199 +171,171 @@ export default function Settings() {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-dark">
             <header className="flex-none px-8 py-6 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
-                <div className="flex flex-wrap justify-between items-end gap-4">
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Tabela de Preços</h2>
-                        <p className="text-slate-400 text-sm font-normal">Gerencie os valores base de materiais por metro quadrado.</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="flex gap-3">
-                            {/* Button removed as per request */}
-                        </div>
-                    </div>
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Configurações</h2>
+                    <p className="text-slate-400 text-sm font-normal">Gerencie os dados da empresa e tabela de preços.</p>
                 </div>
             </header>
 
-            <div className="flex-1 overflow-auto p-8 pt-6">
-                <div className="max-w-6xl mx-auto flex flex-col gap-8">
+            <div className="flex-1 overflow-auto p-8 pt-6 space-y-8">
 
-                    {/* Header Info */}
-                    <div className="flex justify-between items-center bg-surface-dark/50 p-6 rounded-2xl border border-white/5 shadow-2xl">
-                        <div>
-                            <h3 className="text-white text-lg font-bold">Gerenciamento de Materiais</h3>
-                            <p className="text-slate-400 text-sm mt-1">
-                                Adicione, remova ou atualize os preços de venda.
-                                <br />
-                                <span className="text-xs opacity-70">Alterações refletem imediatamente na calculadora.</span>
-                            </p>
+                {/* 1. DADOS DA EMPRESA */}
+                <div className="max-w-6xl mx-auto bg-surface-dark/50 border border-white/5 rounded-2xl p-6 shadow-xl">
+                    <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-primary/20 p-2 rounded-lg text-primary"><Icons.Settings size={20} /></div>
+                            <div>
+                                <h3 className="text-white font-bold text-lg">Dados da Empresa</h3>
+                                <p className="text-slate-400 text-xs">Informações impressas nas Ordens de Serviço.</p>
+                            </div>
                         </div>
                         <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all flex items-center gap-2 group"
+                            onClick={handleSaveSettings}
+                            disabled={savingSettings || loadingSettings}
+                            className="bg-primary hover:bg-primary-hover text-black font-bold px-4 py-2 rounded-lg text-sm shadow-lg shadow-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
                         >
-                            <Icons.Plus size={20} className="group-hover:rotate-90 transition-transform" />
-                            Adicionar Novo Material
+                            {savingSettings ? 'Salvando...' : <><Icons.Check size={16} /> Salvar Dados</>}
                         </button>
                     </div>
 
-                    {loading ? (
-                        <div className="p-12 text-center text-slate-400">Carregando tabela de preços...</div>
+                    {loadingSettings ? (
+                        <div className="text-slate-500 text-sm">Carregando dados...</div>
+                    ) : settings && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <label className="text-xs uppercase font-bold text-slate-500">Nome da Empresa</label>
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    value={settings.companyName}
+                                    onChange={e => handleSettingChange('companyName', e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs uppercase font-bold text-slate-500">CNPJ</label>
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    value={settings.companyCnpj || ''}
+                                    onChange={e => handleSettingChange('companyCnpj', e.target.value)}
+                                    placeholder="00.000.000/0000-00"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs uppercase font-bold text-slate-500">Telefone / WhatsApp</label>
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    value={settings.companyPhone || ''}
+                                    onChange={e => handleSettingChange('companyPhone', e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs uppercase font-bold text-slate-500">Email</label>
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    value={settings.companyEmail || ''}
+                                    onChange={e => handleSettingChange('companyEmail', e.target.value)}
+                                />
+                            </div>
+                            <div className="md:col-span-2 space-y-1">
+                                <label className="text-xs uppercase font-bold text-slate-500">Endereço Completo</label>
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    value={settings.companyAddress || ''}
+                                    onChange={e => handleSettingChange('companyAddress', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 2. TABELA DE PREÇOS (EXISTENTE) */}
+                <div className="max-w-6xl mx-auto flex flex-col gap-8 pb-12">
+                    <div className="flex justify-between items-center bg-surface-dark/50 p-6 rounded-2xl border border-white/5 shadow-xl">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-white/5 p-2 rounded-lg text-white"><Icons.DollarSign size={20} /></div>
+                            <div>
+                                <h3 className="text-white text-lg font-bold">Gerenciamento de Materiais e Preços</h3>
+                                <p className="text-slate-400 text-sm mt-1">Preços base p/ Calculadora.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-all flex items-center gap-2 group"
+                        >
+                            <Icons.Plus size={18} /> Novo Material
+                        </button>
+                    </div>
+
+                    {loadingProducts ? (
+                        <div className="text-center text-slate-400">Carregando materias...</div>
                     ) : (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-6">
                             {uniqueCategories.sort().map(category => {
                                 const categoryProducts = products.filter(p => p.category === category);
                                 if (categoryProducts.length === 0) return null;
-
-                                const itemCount = categoryProducts.reduce((acc, product) => {
-                                    const hasThickness = product.pricingConfig?.thicknessOptions && product.pricingConfig.thicknessOptions.length > 0;
-                                    const hasTypes = product.pricingConfig?.pricesByType && Object.keys(product.pricingConfig.pricesByType).length > 0;
-
-                                    if (hasThickness) return acc + product.pricingConfig!.thicknessOptions!.length;
-                                    if (hasTypes) return acc + Object.keys(product.pricingConfig!.pricesByType!).length;
-                                    return acc + 1;
-                                }, 0);
-
                                 return (
-                                    <div key={category} className="rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-xl">
+                                    <div key={category} className="rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-lg">
                                         <div className="p-4 border-b border-white/5 bg-black/20 flex items-center gap-3">
-                                            <div className="size-10 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 text-primary">
+                                            <div className="size-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 text-primary">
                                                 {getProductIcon(category)}
                                             </div>
-                                            <h4 className="text-white font-bold text-lg">{category}</h4>
-                                            <span className="px-2 py-0.5 rounded-full bg-white/5 text-xs text-slate-400 font-mono">
-                                                {itemCount} itens
-                                            </span>
+                                            <h4 className="text-white font-bold">{category}</h4>
                                         </div>
-
                                         <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="border-b border-white/10 bg-black/10 text-slate-500 text-xs uppercase tracking-wider font-semibold">
-                                                    <th className="p-4 pl-6 w-1/2">Material (Subtipo)</th>
-                                                    <th className="p-4 text-right w-40">Preço Venda (m²)</th>
-                                                    <th className="p-4 pr-6 w-16"></th>
-                                                </tr>
-                                            </thead>
                                             <tbody className="divide-y divide-white/5 text-sm text-slate-300">
                                                 {categoryProducts.map((product) => {
-                                                    const hasThickness = product.pricingConfig?.thicknessOptions && product.pricingConfig.thicknessOptions.length > 0;
-                                                    const hasTypes = product.pricingConfig?.pricesByType && Object.keys(product.pricingConfig.pricesByType).length > 0;
+                                                    const hasThickness = product.pricingConfig?.thicknessOptions?.length > 0;
+                                                    const hasTypes = Object.keys(product.pricingConfig?.pricesByType || {}).length > 0;
                                                     const hasVariants = hasThickness || hasTypes;
 
                                                     return (
                                                         <React.Fragment key={product.id}>
-                                                            {/* Base Product Row - Only show if NO variants */}
                                                             {!hasVariants && (
-                                                                <tr className="hover:bg-white/[0.02] transition-colors group">
-                                                                    <td className="p-4 pl-6">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <span className="text-white font-medium">{product.name}</span>
-                                                                        </div>
-                                                                    </td>
+                                                                <tr className="hover:bg-white/[0.02] group">
+                                                                    <td className="p-4 pl-6 text-white font-medium">{product.name}</td>
                                                                     <td className="p-4 text-right">
-                                                                        <div className="relative">
-                                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
-                                                                            <input
-                                                                                className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none 
-                                                                                ${savingId === product.id ? 'opacity-50' : ''} 
-                                                                                ${editingValues[product.id] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
-                                                                                type="text"
-                                                                                value={editingValues[product.id] !== undefined ? editingValues[product.id] : product.pricePerM2.toFixed(2)}
-                                                                                onChange={(e) => handlePriceChange(product.id, product.id, e.target.value)}
-                                                                                onBlur={() => handlePriceBlur(product, 'base')}
-                                                                                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                                            />
-                                                                        </div>
+                                                                        <input
+                                                                            className={`w-24 bg-black/40 border rounded py-1 px-2 text-right text-white font-mono text-sm outline-none focus:border-primary ${editingValues[product.id] !== undefined ? 'border-primary' : 'border-white/10'}`}
+                                                                            value={editingValues[product.id] ?? product.pricePerM2.toFixed(2)}
+                                                                            onChange={e => handlePriceChange(product.id, product.id, e.target.value)}
+                                                                            onBlur={() => handlePriceBlur(product, 'base')}
+                                                                        />
                                                                     </td>
-                                                                    <td className="p-4 pr-6 text-center">
-                                                                        <button
-                                                                            onClick={() => handleDeleteProduct(product.id)}
-                                                                            className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                                            title="Excluir Material"
-                                                                        >
-                                                                            <Icons.Trash size={18} />
-                                                                        </button>
-                                                                    </td>
+                                                                    <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteProduct(product.id)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
                                                                 </tr>
                                                             )}
-
-                                                            {/* Variants: Thickness (Acrylic) */}
-                                                            {hasThickness && product.pricingConfig.thicknessOptions.map((thickness: string) => {
-                                                                const key = `${product.id}:thickness:${thickness}`;
-                                                                const price = product.pricingConfig.pricesByThickness?.[thickness] || product.pricePerM2;
+                                                            {hasThickness && product.pricingConfig.thicknessOptions.map((t: string) => {
+                                                                const key = `${product.id}:thickness:${t}`;
+                                                                const price = product.pricingConfig.pricesByThickness?.[t] || product.pricePerM2;
                                                                 return (
-                                                                    <tr key={key} className="hover:bg-white/[0.02] transition-colors group">
-                                                                        <td className="p-4 pl-6">
-                                                                            <div className="flex items-center gap-2">
-                                                                                {/* Flattened display: Product Name + Thickness */}
-                                                                                <span className="text-white font-medium">{product.name} {thickness}</span>
-                                                                            </div>
-                                                                        </td>
+                                                                    <tr key={key} className="hover:bg-white/[0.02] group">
+                                                                        <td className="p-4 pl-6 text-white font-medium">{product.name} {t}</td>
                                                                         <td className="p-4 text-right">
-                                                                            <div className="relative">
-                                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
-                                                                                <input
-                                                                                    className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none
-                                                                                    ${savingId === key ? 'opacity-50' : ''}
-                                                                                    ${editingValues[key] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
-                                                                                    type="text"
-                                                                                    value={editingValues[key] !== undefined ? editingValues[key] : price.toFixed(2)}
-                                                                                    onChange={(e) => handlePriceChange(product.id, key, e.target.value)}
-                                                                                    onBlur={() => handlePriceBlur(product, 'thickness', thickness)}
-                                                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                                                />
-                                                                            </div>
+                                                                            <input className={`w-24 bg-black/40 border rounded py-1 px-2 text-right text-white font-mono text-sm outline-none focus:border-primary ${editingValues[key] !== undefined ? 'border-primary' : 'border-white/10'}`}
+                                                                                value={editingValues[key] ?? price.toFixed(2)}
+                                                                                onChange={e => handlePriceChange(product.id, key, e.target.value)}
+                                                                                onBlur={() => handlePriceBlur(product, 'thickness', t)}
+                                                                            />
                                                                         </td>
-                                                                        <td className="p-4 pr-6 text-center">
-                                                                            <button
-                                                                                onClick={() => handleDeleteVariant(product, 'thickness', thickness)}
-                                                                                className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                                                title="Excluir Variação"
-                                                                            >
-                                                                                <Icons.Trash size={18} />
-                                                                            </button>
-                                                                        </td>
+                                                                        <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteVariant(product, 'thickness', t)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
                                                                     </tr>
-                                                                );
+                                                                )
                                                             })}
-
-                                                            {/* Variants: Types (Adesivo) */}
-                                                            {hasTypes && Object.keys(product.pricingConfig.pricesByType).map((type: string) => {
-                                                                const key = `${product.id}:subtype:${type}`;
-                                                                const price = product.pricingConfig.pricesByType[type];
+                                                            {hasTypes && Object.keys(product.pricingConfig.pricesByType).map((t: string) => {
+                                                                const key = `${product.id}:subtype:${t}`;
+                                                                const price = product.pricingConfig.pricesByType[t];
                                                                 return (
-                                                                    <tr key={key} className="hover:bg-white/[0.02] transition-colors group">
-                                                                        <td className="p-4 pl-6">
-                                                                            <div className="flex items-center gap-2">
-                                                                                {/* Flattened display: Product Name + Type */}
-                                                                                <span className="text-white font-medium">{product.name} {type}</span>
-                                                                            </div>
-                                                                        </td>
+                                                                    <tr key={key} className="hover:bg-white/[0.02] group">
+                                                                        <td className="p-4 pl-6 text-white font-medium">{product.name} {t}</td>
                                                                         <td className="p-4 text-right">
-                                                                            <div className="relative">
-                                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">R$</span>
-                                                                                <input
-                                                                                    className={`w-full bg-black/40 border rounded-lg py-1.5 pl-8 pr-2 text-right text-white font-mono text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all outline-none
-                                                                                    ${savingId === key ? 'opacity-50' : ''}
-                                                                                    ${editingValues[key] !== undefined ? 'border-primary/50' : 'border-white/10'}`}
-                                                                                    type="text"
-                                                                                    value={editingValues[key] !== undefined ? editingValues[key] : price.toFixed(2)}
-                                                                                    onChange={(e) => handlePriceChange(product.id, key, e.target.value)}
-                                                                                    onBlur={() => handlePriceBlur(product, 'subtype', type)}
-                                                                                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                                                />
-                                                                            </div>
+                                                                            <input className={`w-24 bg-black/40 border rounded py-1 px-2 text-right text-white font-mono text-sm outline-none focus:border-primary ${editingValues[key] !== undefined ? 'border-primary' : 'border-white/10'}`}
+                                                                                value={editingValues[key] ?? price.toFixed(2)}
+                                                                                onChange={e => handlePriceChange(product.id, key, e.target.value)}
+                                                                                onBlur={() => handlePriceBlur(product, 'subtype', t)}
+                                                                            />
                                                                         </td>
-                                                                        <td className="p-4 pr-6 text-center">
-                                                                            <button
-                                                                                onClick={() => handleDeleteVariant(product, 'subtype', type)}
-                                                                                className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                                                title="Excluir Variação"
-                                                                            >
-                                                                                <Icons.Trash size={18} />
-                                                                            </button>
-                                                                        </td>
+                                                                        <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteVariant(product, 'subtype', t)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
                                                                     </tr>
-                                                                );
+                                                                )
                                                             })}
                                                         </React.Fragment>
                                                     );
@@ -388,101 +350,30 @@ export default function Settings() {
                 </div>
             </div>
 
-            {/* Add Product Modal */}
+            {/* Add Modal */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
-                        <div className="p-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
-                            <h3 className="text-white text-lg font-bold">Adicionar Novo Material</h3>
-                            <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
-                                <Icons.Close size={20} />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Nome do Material</label>
-                                <input
-                                    type="text"
-                                    value={newProductName}
-                                    onChange={(e) => setNewProductName(e.target.value)}
-                                    placeholder="Ex: Adesivo Holográfico"
-                                    className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none"
-                                />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+                        <h3 className="text-white font-bold text-lg">Novo Material</h3>
+                        <input value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="Nome" className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white" />
+                        {!isCreatingCategory ? (
+                            <div className="flex gap-2">
+                                <select value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white">
+                                    <option value="">Categoria...</option>
+                                    {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                                <button onClick={() => setIsCreatingCategory(true)} className="bg-white/10 px-3 rounded-lg text-white"><Icons.Plus size={18} /></button>
                             </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Categoria</label>
-                                {!isCreatingCategory ? (
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <select
-                                                value={newProductCategory}
-                                                onChange={(e) => setNewProductCategory(e.target.value)}
-                                                className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none appearance-none cursor-pointer"
-                                            >
-                                                <option value="" disabled className="bg-slate-900">Selecione uma categoria...</option>
-                                                {uniqueCategories.map(cat => (
-                                                    <option key={cat} value={cat} className="bg-slate-900 text-white">{cat}</option>
-                                                ))}
-                                            </select>
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                                                <Icons.ChevronDown size={18} />
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => { setIsCreatingCategory(true); setNewProductCategory(''); }}
-                                            className="px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors"
-                                            title="Nova Categoria"
-                                        >
-                                            <Icons.Plus size={18} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={newProductCategory}
-                                            onChange={(e) => setNewProductCategory(e.target.value)}
-                                            placeholder="Nome da Nova Categoria"
-                                            className="flex-1 h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none"
-                                            autoFocus
-                                        />
-                                        <button
-                                            onClick={() => setIsCreatingCategory(false)}
-                                            className="px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors"
-                                            title="Cancelar Nova Categoria"
-                                        >
-                                            <Icons.Close size={18} />
-                                        </button>
-                                    </div>
-                                )}
+                        ) : (
+                            <div className="flex gap-2">
+                                <input value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} placeholder="Nova Categoria" className="flex-1 bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white" />
+                                <button onClick={() => setIsCreatingCategory(false)} className="bg-white/10 px-3 rounded-lg text-white"><Icons.Close size={18} /></button>
                             </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Preço por m² (R$)</label>
-                                <input
-                                    type="number"
-                                    value={newProductPrice}
-                                    onChange={(e) => setNewProductPrice(e.target.value)}
-                                    placeholder="0.00"
-                                    className="w-full h-12 rounded-xl bg-black/40 border border-white/10 focus:border-primary text-white text-sm px-4 focus:ring-1 focus:ring-primary transition-all outline-none"
-                                />
-                            </div>
-                        </div>
-                        <div className="p-6 border-t border-white/5 bg-white/5 flex justify-end gap-3">
-                            <button
-                                onClick={() => setIsAddModalOpen(false)}
-                                className="px-4 py-2 rounded-lg hover:bg-white/10 text-white font-medium transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleCreateProduct}
-                                disabled={!newProductName || !newProductCategory || !newProductPrice || isSavingNew}
-                                className="px-6 py-2 rounded-lg bg-primary hover:bg-primary/90 text-background-dark font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSavingNew ? 'Salvando...' : 'Adicionar Item'}
-                            </button>
+                        )}
+                        <input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Preço/m²" className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white" />
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-white">Cancelar</button>
+                            <button onClick={handleCreateProduct} className="px-4 py-2 bg-primary text-black font-bold rounded-lg">{isSavingNew ? '...' : 'Salvar'}</button>
                         </div>
                     </div>
                 </div>

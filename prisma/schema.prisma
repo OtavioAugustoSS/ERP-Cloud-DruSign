@@ -70,42 +70,85 @@ model Order {
   clientId      String?
   client        Client?     @relation(fields: [clientId], references: [id])
   
-  clientName    String?     // Backup caso não tenha cadastro completo
-  clientDocument String?    // CPF ou CNPJ do cliente (separado)
-  clientPhone   String?     // Telefone do cliente (separado)
+  // Dados do Cliente - SNAPSHOT (Manual)
+  clientName    String?
+  clientDocument String?    // CPF ou CNPJ
+  clientIe      String?     // Inscrição Estadual
+  clientPhone   String?
+  
+  // Endereço do Cliente - SNAPSHOT (Manual)
+  clientZip          String?
+  clientStreet       String?
+  clientNumber       String?
+  clientNeighborhood String?
+  clientCity         String?
+  clientState        String?
+
   filePaths     Json?       // Links dos arquivos anexados (Array de strings)
   
-  // Status expandido: "REQUESTED" (Solicitação do Site) -> "PENDING" (Aprovado)
-  status        String      // "REQUESTED", "PENDING", "IN_PRODUCTION", "READY_FOR_SHIPPING", "COMPLETED"
+  // Status expandido
+  status        String      // "PENDING", "IN_PRODUCTION", "READY_FOR_SHIPPING", "COMPLETED", "CANCELLED"
   
-  totalPrice    Float
+  // Financeiro e Prazos
+  serviceValue   Float?     @default(0) // Valor apenas do serviço/mão de obra (opcional, se quiser separar)
+  totalPrice     Float      // Total Geral do Pedido
+  
+  shippingCost    Float      @default(0)
+  discount        Float      @default(0)
+  
+  approvalDate    DateTime?
+  deliveryDate    DateTime?
+  paymentTerms    String?    // Ex: "50% Entrada + 50% Entrega"
+  deliveryMethod  String?
+  
+  notes           String?    // Obs Gerais
+  
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   
   items         OrderItem[]
 }
 
-
-
-
 model OrderItem {
   id           String  @id @default(uuid())
   orderId      String
   order        Order   @relation(fields: [orderId], references: [id])
   
-  productId    String
-  product      Product @relation(fields: [productId], references: [id])
+  productId    String?
+  product      Product? @relation(fields: [productId], references: [id])
   
-  width        Float
-  height       Float
+  width        Float?
+  height       Float?
   quantity     Int
+  unitPrice    Float   @default(0) // Preço unitário no momento do pedido
+  totalPrice   Float   @default(0) // Total da linha (qtd * unitPrice)
+  
   serviceType  String? // Ex: "Banner Promocional"
   finishing    String? // Ex: "Bainha e Ilhós"
   instructions String?
+  observations String? // Obs técnica específica (Ex: "Com ilhós")
+  customDetails String? // Manter por compatibilidade ou remover depois
+  
+  material     String? // Nome do material/produto textual (snapshot)
+  fileUrl      String? // Link ou Nome do Arquivo da Arte
 }
 
 // ------------------------------
-// 5. Sistema de Notificações (Novo)
+// 5. Configurações do Sistema (Novo)
+// ------------------------------
+model SystemSettings {
+  id            String   @id @default(uuid())
+  companyName   String   @default("Minha Gráfica")
+  companyCnpj   String?
+  companyPhone  String?
+  companyEmail  String?
+  companyAddress String?
+  
+  updatedAt     DateTime @updatedAt
+}
+
+// ------------------------------
+// 6. Sistema de Notificações
 // ------------------------------
 model Notification {
   id            String   @id @default(uuid())
@@ -117,7 +160,7 @@ model Notification {
 }
 
 // ------------------------------
-// 6. Logs de Sistema (Opcional)
+// 7. Logs de Sistema (Opcional)
 // ------------------------------
 model Log {
   id        String   @id @default(uuid())

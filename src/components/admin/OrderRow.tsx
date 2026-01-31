@@ -120,16 +120,27 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
             </td>
             <td className="p-4">
                 <div className="flex flex-col gap-1">
-                    <span className="text-white font-bold text-sm tracking-wide">{order.productName || "Produto Personalizado"}</span>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>{order.width}x{order.height}cm</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-600"></span>
-                        <span>{order.quantity}un</span>
-                    </div>
-                    {order.instructions && (
-                        <div className="mt-1 text-xs text-cyan-400/80 italic max-w-xs truncate">
-                            "{order.instructions}"
-                        </div>
+                    {order.items && order.items.length > 1 ? (
+                        <>
+                            <span className="text-white font-bold text-sm tracking-wide">{order.items.length} Itens no Pedido</span>
+                            <div className="text-xs text-slate-400">
+                                {order.items.map(i => i.productName).join(', ').slice(0, 50)}...
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-white font-bold text-sm tracking-wide">{order.productName || "Produto Personalizado"}</span>
+                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                                <span>{order.width}x{order.height}cm</span>
+                                <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                                <span>{order.quantity}un</span>
+                            </div>
+                            {order.instructions && (
+                                <div className="mt-1 text-xs text-cyan-400/80 italic max-w-xs truncate">
+                                    "{order.instructions}"
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </td>

@@ -17,9 +17,27 @@ O **DruSign** revoluciona a gestão de gráficas e empresas de comunicação vis
 
 Diferente de sistemas genéricos, o DruSign entende a complexidade do nicho: vendas por metro quadrado, arquivos pesados (TIFF/PDF), acabamentos específicos (ilhós, bainha) e etapas de produção (Impressão, Corte, Serralheria).
 
+## 🔑 Acesso Administrativo (Ambiente de Desenvolvimento)
+
+Para acessar o painel administrativo com permissões totais ("Master Admin"):
+
+*   **Email:** `admin@drusign.com`
+*   **Senha:** `123456`
+
+> **Nota:** Em produção, essas credenciais devem ser removidas ou alteradas.
+
 ## 🚀 Funcionalidades Atuais
 
-O sistema está focado atualmente no **Módulo Administrativo**, oferecendo ferramentas robustas para a gestão interna:
+O sistema oferece soluções completas para a gestão do negócio:
+
+### 👥 Gestão de Usuários e Clientes (CRM)
+*   **Controle de Acesso:** Perfis de Administrador e Funcionário.
+*   **Cadastro de Clientes:** Armazenamento de dados fiscais (CPF/CNPJ) e contatos.
+*   **Histórico de Compras:** Visualização rápida de pedidos anteriores por cliente.
+
+### 🔔 Sistema de Notificações
+*   **Alertas em Tempo Real:** Notificações visuais para novas atualizações.
+*   **Comunicação Integrada:** Avisos automáticos entre setores (Vendas ➔ Produção).
 
 ### 🔧 Painel Administrativo (Admin)
 *   **📊 Dashboard Industrial:** Visão geral em tempo real com métricas críticas e design Dark Mode focado em produtividade.
@@ -36,8 +54,12 @@ O sistema está focado atualmente no **Módulo Administrativo**, oferecendo ferr
     *   Controle de Materiais e Preços por m².
     *   Gestão de Acabamentos e Serviços Extras.
 
-### 🏭 Pipeline de Produção
-*   Fluxo visual de status: `Pendente` ➔ `Produção` ➔ `Acabamento` ➔ `Pronto`.
+### 🏭 Pipeline de Produção Detalhado
+1.  **Pendente:** Pedido recebido, aguardando aprovação financeira/arte.
+2.  **Produção:** Arquivos liberados para impressão/confecção.
+3.  **Acabamento:** Etapa de corte, solda, ilhós, envernizamento.
+4.  **Pronto:** Finalizado e aguardando retirada ou envio.
+5.  **Entregue:** Ciclo completo encerrado.
 
 ---
 
@@ -107,7 +129,7 @@ npm run seed
 npm run dev
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
+Acesse [http://localhost:4000](http://localhost:4000) no seu navegador.
 
 ---
 

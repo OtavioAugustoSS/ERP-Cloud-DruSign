@@ -3,6 +3,8 @@
 import prisma from '@/lib/db';
 import { Order, OrderInput, OrderStatus } from '@/types';
 
+const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export const submitOrder = async (orderData: OrderInput): Promise<{ success: boolean; order?: Order; error?: string }> => {
     try {
         const hasItems = orderData.items && orderData.items.length > 0;
@@ -19,7 +21,10 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
             quantity: orderData.quantity!,
             serviceType: orderData.serviceType,
             finishing: orderData.finishing,
-            instructions: orderData.instructions
+            customDetails: undefined,
+            observations: undefined,
+            unitPrice: 0,
+            totalPrice: orderData.totalPrice
         }];
 
         // Basic validation for items (optional)
@@ -29,23 +34,50 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
 
         const newOrder = await prisma.order.create({
             data: {
+                // Client Data - Manual Snapshot
                 clientName: orderData.clientName,
                 clientDocument: orderData.clientDocument,
+                clientIe: orderData.clientIe,
                 clientPhone: orderData.clientPhone,
+                clientZip: orderData.clientZip,
+                clientStreet: orderData.clientStreet,
+                clientNumber: orderData.clientNumber,
+                clientNeighborhood: orderData.clientNeighborhood,
+                clientCity: orderData.clientCity,
+                clientState: orderData.clientState,
+
                 filePaths: orderData.filePaths || [],
-                clientId: orderData.clientDocument ? undefined : undefined,
                 status: 'PENDING',
+
+                // Finances
+                serviceValue: orderData.serviceValue || 0,
                 totalPrice: orderData.totalPrice,
+                shippingCost: orderData.shippingCost || 0,
+                discount: orderData.discount || 0,
+
+                // Dates & Terms
+                deliveryDate: orderData.deliveryDate,
+                approvalDate: orderData.approvalDate,
+                paymentTerms: orderData.paymentTerms,
+                deliveryMethod: orderData.deliveryMethod,
+                notes: orderData.notes,
+
                 // Nested create for OrderItem
                 items: {
                     create: orderItemsData!.map(item => ({
-                        productId: item.productId,
-                        width: item.width,
-                        height: item.height,
+                        productId: (item.productId && isUuid(item.productId)) ? item.productId : undefined,
+                        width: item.width || 0,
+                        height: item.height || 0,
                         quantity: item.quantity,
                         serviceType: item.serviceType,
                         finishing: item.finishing,
-                        instructions: item.instructions
+                        instructions: item.instructions,
+                        customDetails: item.customDetails,
+                        observations: item.observations,
+                        unitPrice: item.unitPrice || 0,
+                        totalPrice: item.totalPrice || 0,
+                        material: item.material,
+                        fileUrl: item.fileUrl // New Field added
                     }))
                 }
             },
@@ -60,20 +92,55 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
 
         const mappedOrder: Order = {
             id: newOrder.id,
-            // Map flat fields from the first item
+            clientName: newOrder.clientName || "",
+            clientDocument: newOrder.clientDocument || undefined,
+            clientPhone: newOrder.clientPhone || undefined,
+            clientIe: newOrder.clientIe || undefined,
+            clientZip: newOrder.clientZip || undefined,
+            clientStreet: newOrder.clientStreet || undefined,
+            clientNumber: newOrder.clientNumber || undefined,
+            clientNeighborhood: newOrder.clientNeighborhood || undefined,
+            clientCity: newOrder.clientCity || undefined,
+            clientState: newOrder.clientState || undefined,
+
+            serviceValue: newOrder.serviceValue || 0,
+            totalPrice: newOrder.totalPrice,
+            shippingCost: newOrder.shippingCost,
+            discount: newOrder.discount,
+
+            deliveryDate: newOrder.deliveryDate || undefined,
+            approvalDate: newOrder.approvalDate || undefined,
+            paymentTerms: newOrder.paymentTerms || undefined,
+            deliveryMethod: newOrder.deliveryMethod || undefined,
+            notes: newOrder.notes || undefined,
+
+            status: newOrder.status as OrderStatus,
+            createdAt: newOrder.createdAt,
+            filePaths: (newOrder.filePaths as string[]) || [],
+            // Legacy/First item fallbacks (optional but kept for compatibility if needed)
             productId: newOrder.items[0]?.productId || "",
             productName: newOrder.items[0]?.product?.name || "",
             width: newOrder.items[0]?.width || 0,
             height: newOrder.items[0]?.height || 0,
             quantity: newOrder.items[0]?.quantity || 1,
-            serviceType: newOrder.items[0]?.serviceType || undefined,
-            finishing: newOrder.items[0]?.finishing || undefined,
-            instructions: newOrder.items[0]?.instructions || "",
 
-            clientName: newOrder.clientName || "",
-            totalPrice: newOrder.totalPrice,
-            status: newOrder.status as OrderStatus,
-            createdAt: newOrder.createdAt
+            // New Items Array
+            items: newOrder.items.map((i: any) => ({
+                id: i.id,
+                productId: i.productId,
+                productName: i.product.name,
+                width: i.width || 0,
+                height: i.height || 0,
+                quantity: i.quantity,
+                serviceType: i.serviceType || undefined,
+                finishing: i.finishing || undefined,
+                instructions: i.instructions || undefined,
+                customDetails: i.customDetails || undefined,
+                observations: i.observations || undefined,
+                unitPrice: i.unitPrice || 0,
+                totalPrice: i.totalPrice || 0,
+                material: i.material || undefined
+            }))
         };
 
         return { success: true, order: mappedOrder };
@@ -100,28 +167,48 @@ export const getPendingOrders = async (): Promise<Order[]> => {
             }
         });
 
-        return orders.map((o: any) => {
-            const item = o.items[0]; // Assuming single item per order for now
-            return {
-                id: o.id,
-                clientName: o.clientName || "Cliente",
-                clientDocument: o.clientDocument,
-                clientPhone: o.clientPhone,
-                filePaths: (o.filePaths as string[]) || [], // Map JSON to string array
-                status: o.status as OrderStatus,
-                createdAt: o.createdAt,
-                totalPrice: o.totalPrice,
-                // Fields from first item
-                productId: item?.productId || "",
-                productName: item?.product?.name || "Produto Desconhecido",
-                width: item?.width || 0,
-                height: item?.height || 0,
-                quantity: item?.quantity || 1,
-                instructions: item?.instructions || "",
-                serviceType: item?.serviceType || undefined,
-                finishing: item?.finishing || undefined
-            };
-        });
+        return orders.map((o: any) => ({
+            id: o.id,
+            clientName: o.clientName || "Cliente",
+            clientDocument: o.clientDocument,
+            clientPhone: o.clientPhone,
+            filePaths: (o.filePaths as string[]) || [],
+            status: o.status as OrderStatus,
+            createdAt: o.createdAt,
+            totalPrice: o.totalPrice,
+
+            // Delivery/Financial
+            deliveryDate: o.deliveryDate,
+            paymentTerms: o.paymentTerms,
+            deliveryMethod: o.deliveryMethod,
+            shippingCost: o.shippingCost,
+            discount: o.discount,
+            notes: o.notes,
+
+            // Legacy fallbacks
+            productId: o.items[0]?.productId || "",
+            productName: o.items[0]?.product?.name || "Vários Itens",
+            width: o.items[0]?.width || 0,
+            height: o.items[0]?.height || 0,
+            quantity: o.items[0]?.quantity || 1,
+            instructions: o.items[0]?.instructions || "",
+
+            items: o.items.map((i: any) => ({
+                id: i.id,
+                productId: i.productId,
+                productName: i.product?.name || "Produto",
+                width: i.width || 0,
+                height: i.height || 0,
+                quantity: i.quantity,
+                serviceType: i.serviceType,
+                finishing: i.finishing,
+                instructions: i.instructions,
+                customDetails: i.customDetails,
+                unitPrice: (i.width && i.height && i.product?.pricePerM2)
+                    ? parseFloat(((i.width / 100) * (i.height / 100) * i.product.pricePerM2).toFixed(2))
+                    : 0
+            }))
+        }));
     } catch (error) {
         console.error("Error getting pending orders:", error);
         return [];
@@ -133,7 +220,7 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
         const orders = await prisma.order.findMany({
             where: {
                 status: {
-                    in: ['COMPLETED', 'CANCELLED'] // Assuming cancelled is handled or just use completed for history
+                    in: ['COMPLETED', 'CANCELLED']
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -144,27 +231,48 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
             }
         });
 
-        return orders.map((o: any) => {
-            const item = o.items[0];
-            return {
-                id: o.id,
-                clientName: o.clientName || "Cliente",
-                clientDocument: o.clientDocument,
-                clientPhone: o.clientPhone,
-                filePaths: (o.filePaths as string[]) || [], // Map JSON to string array
-                status: o.status as OrderStatus,
-                createdAt: o.createdAt,
-                totalPrice: o.totalPrice,
-                productId: item?.productId || "",
-                productName: item?.product?.name || "",
-                width: item?.width || 0,
-                height: item?.height || 0,
-                quantity: item?.quantity || 1,
-                instructions: item?.instructions || "",
-                serviceType: item?.serviceType || undefined,
-                finishing: item?.finishing || undefined
-            };
-        });
+        return orders.map((o: any) => ({
+            id: o.id,
+            clientName: o.clientName || "Cliente",
+            clientDocument: o.clientDocument,
+            clientPhone: o.clientPhone,
+            filePaths: (o.filePaths as string[]) || [],
+            status: o.status as OrderStatus,
+            createdAt: o.createdAt,
+            totalPrice: o.totalPrice,
+
+            // Delivery/Financial
+            deliveryDate: o.deliveryDate,
+            paymentTerms: o.paymentTerms,
+            deliveryMethod: o.deliveryMethod,
+            shippingCost: o.shippingCost,
+            discount: o.discount,
+            notes: o.notes,
+
+            // Legacy fallbacks
+            productId: o.items[0]?.productId || "",
+            productName: o.items[0]?.product?.name || "Vários Itens",
+            width: o.items[0]?.width || 0,
+            height: o.items[0]?.height || 0,
+            quantity: o.items[0]?.quantity || 1,
+            instructions: o.items[0]?.instructions || "",
+
+            items: o.items.map((i: any) => ({
+                id: i.id,
+                productId: i.productId,
+                productName: i.product?.name || "Produto",
+                width: i.width || 0,
+                height: i.height || 0,
+                quantity: i.quantity,
+                serviceType: i.serviceType,
+                finishing: i.finishing,
+                instructions: i.instructions,
+                customDetails: i.customDetails,
+                unitPrice: (i.width && i.height && i.product?.pricePerM2)
+                    ? parseFloat(((i.width / 100) * (i.height / 100) * i.product.pricePerM2).toFixed(2))
+                    : 0
+            }))
+        }));
     } catch (error) {
         console.error("Error getting history orders:", error);
         return [];
@@ -212,6 +320,15 @@ export const updateOrderDetails = async (id: string, data: Partial<OrderInput>):
                 clientName: data.clientName,
                 clientDocument: data.clientDocument,
                 clientPhone: data.clientPhone,
+
+                // OS Fields
+                deliveryDate: data.deliveryDate,
+                deliveryMethod: data.deliveryMethod,
+                paymentTerms: data.paymentTerms,
+                shippingCost: data.shippingCost,
+                discount: data.discount,
+                notes: data.notes,
+
                 items: {
                     updateMany: {
                         where: { orderId: id },

@@ -9,7 +9,6 @@ import { getPendingOrders, updateOrderStatus } from '../../actions/order';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import OrderRow from './OrderRow';
 import { Order, OrderStatus } from '../../types';
-import { formatCurrency } from '../../lib/utils/price';
 
 export default function Orders() {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -55,8 +54,6 @@ export default function Orders() {
 
             const matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
 
-            // If Employee, we ignore statusFilter dropdown effectively because we enforce IN_PRODUCTION
-            // But if they filtered for 'PENDING', they see nothing (correct).
             return matchesSearch && matchesStatus;
         });
     }, [orders, searchTerm, statusFilter, isEmployee]);
@@ -84,7 +81,7 @@ export default function Orders() {
                         <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Fila de Produção</h2>
                         <p className="text-slate-400 text-sm font-normal">Acompanhe e gerencie o fluxo de pedidos ativos.</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
                         {!isEmployee && (
                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/5 border border-yellow-500/10 text-xs text-yellow-500">
                                 <span className="size-2 rounded-full bg-yellow-500 animate-pulse"></span>
@@ -152,7 +149,7 @@ export default function Orders() {
 
             {/* TABLE CONTENT */}
             <div className="flex-1 overflow-auto p-8 pt-4">
-                <div className="w-full rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-2xl">
+                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl">
                     {loading ? (
                         <div className="p-12 flex justify-center">
                             <LoadingScreen />
