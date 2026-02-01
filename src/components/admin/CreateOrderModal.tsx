@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icons } from './Icons';
 import { submitOrder } from '../../actions/order';
+import { getMaterialSettings } from '../../actions/settings';
 import { formatCurrency } from '@/lib/utils/price';
 import { Loader2 } from 'lucide-react';
 
@@ -44,39 +45,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
     // --- SEÇÃO B: CARRINHO DE ITENS ---
     const [items, setItems] = useState<OrderItemRow[]>([]);
 
-    // --- CONFIG MATERIAIS ---
-    const MATERIALS: Record<string, { name: string; price: number }[]> = {
-        'Adesivo': [
-            { name: 'Brilhoso', price: 65 },
-            { name: 'Fosco', price: 70 },
-            { name: 'Transparente', price: 75 },
-            { name: 'Jateado', price: 90 },
-            { name: 'Perfurado', price: 95 },
-        ],
-        'Lona': [
-            { name: '440g Promocional', price: 80 },
-            { name: 'Brilho Front', price: 90 },
-            { name: 'Fosca', price: 95 },
-            { name: 'Backlight', price: 120 },
-        ],
-        'Placa Rígida': [
-            { name: 'PS 1mm', price: 150 },
-            { name: 'PS 2mm', price: 180 },
-            { name: 'ACM 3mm', price: 250 },
-            { name: 'Acrílico 2mm', price: 350 },
-            { name: 'PVC Expandido', price: 190 },
-        ],
-        'Tecido': [
-            { name: 'Oxford', price: 55 },
-            { name: 'Microfibra', price: 60 },
-            { name: 'Canvas', price: 150 },
-        ],
-        'Papel': [
-            { name: 'Sulfite 90g', price: 15 },
-            { name: 'Couché 150g', price: 25 },
-            { name: 'Fotográfico', price: 80 },
-        ]
-    };
+    // --- CONFIG MATERIAIS (DINÂMICO) ---
+    const [availableMaterials, setAvailableMaterials] = useState<Record<string, Record<string, number>> | null>(null);
+
+    useEffect(() => {
+        getMaterialSettings().then(setAvailableMaterials);
+    }, []);
 
     // Form Item
     const [currentCategory, setCurrentCategory] = useState('');
@@ -100,13 +74,14 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
 
     // Auto-Calculate Unit Price
     useEffect(() => {
-        if (currentCategory && currentSubtype && currentWidth && currentHeight) {
-            const subtypeData = MATERIALS[currentCategory]?.find(s => s.name === currentSubtype);
-            if (subtypeData) {
+        if (availableMaterials && currentCategory && currentSubtype && currentWidth && currentHeight) {
+            const priceSettings = availableMaterials[currentCategory]?.[currentSubtype];
+
+            if (typeof priceSettings === 'number') {
                 const widthM = Number(currentWidth) / 100;
                 const heightM = Number(currentHeight) / 100;
                 const area = widthM * heightM;
-                const calcPrice = area * subtypeData.price;
+                const calcPrice = area * priceSettings;
 
                 if (!isNaN(calcPrice)) {
                     // Minimo R$ 10.00
@@ -115,7 +90,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
                 }
             }
         }
-    }, [currentCategory, currentSubtype, currentWidth, currentHeight]);
+    }, [availableMaterials, currentCategory, currentSubtype, currentWidth, currentHeight]);
 
     // Add Item
     const handleAddItem = () => {
@@ -328,7 +303,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
                                                 setCurrentSubtype('');
                                             }}>
                                             <option value="">Selecione...</option>
-                                            {Object.keys(MATERIALS).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            {availableMaterials && Object.keys(availableMaterials).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -336,13 +311,13 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
                                         <select className="w-full bg-zinc-950 border border-zinc-700 rounded-lg h-11 px-3 text-sm text-white focus:border-blue-500 outline-none cursor-pointer disabled:opacity-50"
                                             value={currentSubtype} onChange={e => setCurrentSubtype(e.target.value)} disabled={!currentCategory}>
                                             <option value="">Selecione...</option>
-                                            {currentCategory && MATERIALS[currentCategory]?.map(sub => (
-                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
+                                            {availableMaterials && currentCategory && availableMaterials[currentCategory] && Object.keys(availableMaterials[currentCategory]).map(sub => (
+                                                <option key={sub} value={sub}>{sub}</option>
                                             ))}
                                         </select>
                                         <div className="text-right mt-1 h-4">
-                                            {currentSubtype && <span className="text-[10px] text-green-400 font-mono">
-                                                Base: {formatCurrency(MATERIALS[currentCategory]?.find(s => s.name === currentSubtype)?.price || 0)}/m²
+                                            {currentSubtype && availableMaterials && <span className="text-[10px] text-green-400 font-mono">
+                                                Base: {formatCurrency(availableMaterials[currentCategory]?.[currentSubtype] || 0)}/m²
                                             </span>}
                                         </div>
                                     </div>

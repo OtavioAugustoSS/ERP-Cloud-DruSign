@@ -143,6 +143,7 @@ model SystemSettings {
   companyPhone  String?
   companyEmail  String?
   companyAddress String?
+  priceSettings  String?  // JSON stringified: { "Adesivo": { "Fosco": 65 } }
   
   updatedAt     DateTime @updatedAt
 }
