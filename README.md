@@ -1,7 +1,7 @@
 # 🖨️ DruSign - ERP Web-to-Print Inteligente
 
 ![Status do Projeto](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow?style=for-the-badge)
-![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-teal?style=for-the-badge&logo=prisma)
 ![MySQL](https://img.shields.io/badge/Database-MySQL-orange?style=for-the-badge&logo=mysql)
@@ -16,15 +16,6 @@
 O **DruSign** revoluciona a gestão de gráficas e empresas de comunicação visual ao integrar o fluxo de vendas online (Web-to-Print) com o controle total da produção industrial. 
 
 Diferente de sistemas genéricos, o DruSign entende a complexidade do nicho: vendas por metro quadrado, arquivos pesados (TIFF/PDF), acabamentos específicos (ilhós, bainha) e etapas de produção (Impressão, Corte, Serralheria).
-
-## 🔑 Acesso Administrativo (Ambiente de Desenvolvimento)
-
-Para acessar o painel administrativo com permissões totais ("Master Admin"):
-
-*   **Email:** `admin@drusign.com`
-*   **Senha:** `123456`
-
-> **Nota:** Em produção, essas credenciais devem ser removidas ou alteradas.
 
 ## 🚀 Funcionalidades Atuais
 
