@@ -3,8 +3,10 @@
 import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/lib/auth/session'
 
 export async function registerUser(data: any) {
+    await requireAdmin();
     try {
         const { name, email, password, role, phone, image } = data;
 
@@ -42,6 +44,7 @@ export async function registerUser(data: any) {
 }
 
 export async function getUsers() {
+    await requireAdmin();
     try {
         const users = await prisma.user.findMany({
             orderBy: { createdAt: 'desc' },
@@ -63,6 +66,7 @@ export async function getUsers() {
 }
 
 export async function updateUser(id: string, data: any) {
+    await requireAdmin();
     try {
         const { name, email, role, phone, image, password } = data;
 
@@ -108,6 +112,7 @@ export async function updateUser(id: string, data: any) {
 }
 
 export async function deleteUser(id: string) {
+    await requireAdmin();
     try {
         await prisma.user.delete({
             where: { id }

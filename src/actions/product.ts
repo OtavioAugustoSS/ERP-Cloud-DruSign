@@ -4,8 +4,10 @@ import prisma from '@/lib/db';
 import { Product } from '@/types';
 
 import { revalidatePath } from 'next/cache';
+import { requireAdmin, requireUser } from '@/lib/auth/session';
 
 export const getAllProducts = async (): Promise<Product[]> => {
+    await requireUser();
     try {
         const products = await prisma.product.findMany();
         // Force-refresh cache mechanism (optional, depending on Next.js config)
@@ -20,6 +22,7 @@ export const getAllProducts = async (): Promise<Product[]> => {
 };
 
 export const updateProductPricing = async (id: string, newPrice: number, pricingConfig?: any): Promise<{ success: boolean; product?: Product; message?: string }> => {
+    await requireAdmin();
     try {
         const updated = await prisma.product.update({
             where: { id },
@@ -49,6 +52,7 @@ export const updateProductPricing = async (id: string, newPrice: number, pricing
 };
 
 export const createProduct = async (data: Omit<Product, 'id'>): Promise<{ success: boolean; product?: Product }> => {
+    await requireAdmin();
     try {
         const newProduct = await prisma.product.create({
             data: {
@@ -79,6 +83,7 @@ export const createProduct = async (data: Omit<Product, 'id'>): Promise<{ succes
 };
 
 export const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    await requireAdmin();
     try {
         await prisma.product.delete({
             where: { id }

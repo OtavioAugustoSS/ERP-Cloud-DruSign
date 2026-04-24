@@ -2,10 +2,12 @@
 
 import prisma from '@/lib/db';
 import { Order, OrderInput, OrderStatus } from '@/types';
+import { requireUser } from '@/lib/auth/session';
 
 const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 export const submitOrder = async (orderData: OrderInput): Promise<{ success: boolean; order?: Order; error?: string }> => {
+    await requireUser();
     try {
         const hasItems = orderData.items && orderData.items.length > 0;
         const hasFlat = !!orderData.productId;
@@ -152,6 +154,7 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
 };
 
 export const getPendingOrders = async (): Promise<Order[]> => {
+    await requireUser();
     try {
         const orders = await prisma.order.findMany({
             where: {
@@ -216,6 +219,7 @@ export const getPendingOrders = async (): Promise<Order[]> => {
 };
 
 export const getHistoryOrders = async (): Promise<Order[]> => {
+    await requireUser();
     try {
         const orders = await prisma.order.findMany({
             where: {
@@ -282,6 +286,7 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
 import { createNotification } from './notification';
 
 export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<{ success: boolean }> => {
+    await requireUser();
     try {
         const order = await prisma.order.update({
             where: { id },
@@ -313,6 +318,7 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
 };
 
 export const updateOrderDetails = async (id: string, data: Partial<OrderInput>): Promise<{ success: boolean; error?: string }> => {
+    await requireUser();
     try {
         await prisma.order.update({
             where: { id },

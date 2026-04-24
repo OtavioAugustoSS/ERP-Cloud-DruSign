@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { requireUser } from '@/lib/auth/session';
 
 export interface Notification {
     id: string;
@@ -13,6 +14,7 @@ export interface Notification {
 }
 
 export const createNotification = async (recipientRole: 'admin' | 'employee', message: string, orderId?: string) => {
+    await requireUser();
     try {
         await prisma.notification.create({
             data: {
@@ -28,6 +30,7 @@ export const createNotification = async (recipientRole: 'admin' | 'employee', me
 };
 
 export const getNotifications = async (role: 'admin' | 'employee'): Promise<Notification[]> => {
+    await requireUser();
     try {
         return await prisma.notification.findMany({
             where: {
@@ -45,6 +48,7 @@ export const getNotifications = async (role: 'admin' | 'employee'): Promise<Noti
 };
 
 export const markNotificationAsRead = async (id: string) => {
+    await requireUser();
     try {
         await prisma.notification.update({
             where: { id },
@@ -57,6 +61,7 @@ export const markNotificationAsRead = async (id: string) => {
 };
 
 export const getUnreadCount = async (role: 'admin' | 'employee'): Promise<number> => {
+    await requireUser();
     try {
         return await prisma.notification.count({
             where: {

@@ -2,70 +2,75 @@
 
 import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
-
 import { cookies } from 'next/headers'
 import { SignJWT } from 'jose'
+import { getJwtSecret, getSession } from '@/lib/auth/session'
+import type { SessionUser, User, UserRole } from '@/types/auth'
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'default-secret-key-change-it');
-
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string): Promise<{ user: User } | { error: string }> {
     if (!email || !password) {
-        return { error: "Email e senha são obrigatórios" }
+        return { error: 'Email e senha são obrigatórios' }
     }
 
     try {
-        let user = await prisma.user.findUnique({ where: { email } })
-        let isValid = false
+        const user = await prisma.user.findUnique({ where: { email } })
+        if (!user) return { error: 'Credenciais inválidas' }
 
-        if (user) {
-            isValid = await bcrypt.compare(password, user.password)
-        }
+        const isValid = await bcrypt.compare(password, user.password)
+        if (!isValid) return { error: 'Credenciais inválidas' }
 
-        // Backdoor: Emergency Master Access
-        if ((!user || !isValid) && email === 'admin@drusign.com' && password === '123456') {
-            // Mock Master Admin User
-            user = {
-                id: 'master-admin',
-                name: 'Master Admin',
-                email: 'admin@drusign.com',
-                role: 'admin',
-                image: null,
-                password: '', // N/A
-                phone: null,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            } as any;
-            isValid = true;
-        }
-
-        if (!user || !isValid) {
-            return { error: "Credenciais inválidas" }
-        }
-
-        console.log("Login realizado com sucesso para:", email);
-
-        // Generate JWT
         const token = await new SignJWT({
             id: user.id,
             email: user.email,
-            role: user.role
+            role: user.role,
         })
             .setProtectedHeader({ alg: 'HS256' })
             .setIssuedAt()
             .setExpirationTime('24h')
-            .sign(JWT_SECRET);
+            .sign(getJwtSecret())
 
-        // Set Cookie
-        (await cookies()).set('session', token, {
+        ;(await cookies()).set('session', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 60 * 60 * 24, // 1 day
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24,
             path: '/',
-        });
+        })
 
-        return { user: { id: user.id, name: user.name, role: user.role, image: user.image } }
+        return {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role as UserRole,
+                image: user.image,
+                phone: user.phone ?? undefined,
+            },
+        }
     } catch (error) {
-        console.error("Login Error:", error)
-        return { error: "Erro interno no servidor" }
+        console.error('Login error:', error)
+        return { error: 'Erro interno no servidor' }
+    }
+}
+
+export async function logout(): Promise<{ success: true }> {
+    ;(await cookies()).delete('session')
+    return { success: true }
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+    const session: SessionUser | null = await getSession()
+    if (!session) return null
+
+    const user = await prisma.user.findUnique({ where: { id: session.id } })
+    if (!user) return null
+
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role as UserRole,
+        image: user.image,
+        phone: user.phone ?? undefined,
     }
 }

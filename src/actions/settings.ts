@@ -1,8 +1,10 @@
 'use server';
 
 import prisma from '@/lib/db';
+import { requireUser } from '@/lib/auth/session';
 
 export async function getMaterialSettings() {
+    await requireUser();
     try {
         const settings = await prisma.systemSettings.findFirst();
 

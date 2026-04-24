@@ -1,14 +1,20 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types/auth';
 import { useRouter } from 'next/navigation';
-import { login as loginAction } from '../actions/auth';
+import { User } from '../types/auth';
+import {
+    login as loginAction,
+    logout as logoutAction,
+    getCurrentUser,
+} from '../actions/auth';
+
+export type LoginResult = { user: User } | { error: string };
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string, password: string) => Promise<any>;
-    logout: () => void;
+    login: (email: string, password: string) => Promise<LoginResult>;
+    logout: () => Promise<void>;
     isLoading: boolean;
 }
 
@@ -20,49 +26,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Check local storage on mount
-        const storedUser = localStorage.getItem('drusign_user');
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Failed to parse user from local storage");
-                localStorage.removeItem('drusign_user');
-            }
-        }
-        setIsLoading(false);
+        let alive = true;
+        getCurrentUser()
+            .then((u) => {
+                if (alive) setUser(u);
+            })
+            .catch(() => {
+                if (alive) setUser(null);
+            })
+            .finally(() => {
+                if (alive) setIsLoading(false);
+            });
+        return () => {
+            alive = false;
+        };
     }, []);
 
-    const login = async (email: string, password: string): Promise<any> => {
+    const login = async (email: string, password: string): Promise<LoginResult> => {
         setIsLoading(true);
         try {
-            // Call Server Action
             const result = await loginAction(email, password);
-
-            if (result?.user) {
-                setUser(result.user);
-                // We keep localStorage for client-side persistence of USER DETAILS only.
-                // The actual session is handled by the HttpOnly cookie set by the server action.
-                localStorage.setItem('drusign_user', JSON.stringify(result.user));
-                return result;
-            }
-
-            return result; // contains error
-        } catch (error) {
-            console.error("AuthContext Login Error:", error);
-            return { error: "Erro inesperado ao fazer login." };
+            if ('user' in result) setUser(result.user);
+            return result;
         } finally {
             setIsLoading(false);
         }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('drusign_user');
-        // Force clear cookie client-side if possible (mostly for dev/ui feedback)
-        // The server should handle this on a real logout route
-        document.cookie = "session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-        router.push('/login');
+    const logout = async () => {
+        try {
+            await logoutAction();
+        } finally {
+            setUser(null);
+            router.push('/');
+            router.refresh();
+        }
     };
 
     return (

@@ -2,8 +2,10 @@
 
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { requireUser } from '@/lib/auth/session';
 
 export async function uploadFiles(formData: FormData): Promise<{ success: boolean; filePaths?: string[]; error?: string }> {
+    await requireUser();
     try {
         const files = formData.getAll('files') as File[];
 

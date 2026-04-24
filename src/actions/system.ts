@@ -2,9 +2,11 @@
 
 import prisma from '@/lib/db';
 import { SystemSettings } from '@/types';
+import { requireAdmin, requireUser } from '@/lib/auth/session';
 
 // Get Settings (singleton-like behavior: get first or create default)
 export const getSystemSettings = async (): Promise<SystemSettings> => {
+    await requireUser();
     try {
         const settings = await prisma.systemSettings.findFirst();
 
@@ -35,6 +37,7 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
 
 // Update Settings
 export const updateSystemSettings = async (data: Partial<SystemSettings>): Promise<{ success: boolean; error?: string }> => {
+    await requireAdmin();
     try {
         const current = await prisma.systemSettings.findFirst();
 
