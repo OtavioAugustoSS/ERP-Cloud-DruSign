@@ -68,7 +68,7 @@ function OrderDetailsModal({ isOpen, onClose, order: initialOrder, onUpdate }: O
         const itemsHtml = (order.items || []).map(item => `
             <tr style="border-bottom: 1px solid #ddd;">
                 <td style="padding: 8px;">${item.productName} ${item.finishing ? `(${item.finishing})` : ''}</td>
-                <td style="padding: 8px; text-align: center;">${item.width > 0 ? `${item.width}x${item.height}` : '-'}</td>
+                <td style="padding: 8px; text-align: center;">${(item.width ?? 0) > 0 ? `${item.width}x${item.height}` : '-'}</td>
                 <td style="padding: 8px; text-align: center;">${item.quantity}</td>
                 <td style="padding: 8px; text-align: center;">${item.observations || '-'}</td>
             </tr>

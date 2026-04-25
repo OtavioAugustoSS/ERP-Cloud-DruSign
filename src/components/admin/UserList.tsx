@@ -9,7 +9,7 @@ interface User {
     id: string;
     name: string;
     email: string;
-    role: string;
+    role: 'admin' | 'employee';
     phone?: string | null;
     image?: string | null;
 }
@@ -25,13 +25,11 @@ export default function UserList({ initialUsers }: UserListProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const router = useRouter();
 
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        phone: '',
-        role: 'employee',
-        image: ''
+    const [formData, setFormData] = useState<{
+        name: string; email: string; password: string;
+        phone: string; role: 'admin' | 'employee'; image: string;
+    }>({
+        name: '', email: '', password: '', phone: '', role: 'employee', image: ''
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

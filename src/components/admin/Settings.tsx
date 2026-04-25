@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Icons } from './Icons';
 import { getAllProducts, updateProductPricing, createProduct, deleteProduct } from '../../actions/product';
 import { getSystemSettings, updateSystemSettings } from '../../actions/system';
-import { Product, SystemSettings } from '../../types';
+import { Product, SystemSettings, FlexPricingConfig } from '../../types';
 
 export default function Settings() {
     // --- PRODUCT STATE ---
@@ -93,13 +93,13 @@ export default function Settings() {
 
         let result;
         if (priceType === 'base') {
-            result = await updateProductPricing(product.id, newPrice, product.pricingConfig);
+            result = await updateProductPricing(product.id, newPrice, product.pricingConfig ?? undefined);
         } else {
-            const newConfig = { ...product.pricingConfig };
+            const newConfig = { ...(product.pricingConfig ?? {}) } as FlexPricingConfig;
             if (priceType === 'thickness') {
-                newConfig.pricesByThickness = { ...(newConfig.pricesByThickness || {}), [variantKey!]: newPrice };
+                newConfig.pricesByThickness = { ...(newConfig.pricesByThickness ?? {}), [variantKey!]: newPrice };
             } else if (priceType === 'subtype') {
-                newConfig.pricesByType = { ...(newConfig.pricesByType || {}), [variantKey!]: newPrice };
+                newConfig.pricesByType = { ...(newConfig.pricesByType ?? {}), [variantKey!]: newPrice };
             }
             result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
         }
@@ -144,7 +144,7 @@ export default function Settings() {
 
     const handleDeleteVariant = async (product: Product, type: 'thickness' | 'subtype', variantKey: string) => {
         if (!window.confirm(`Excluir variação "${variantKey}"?`)) return;
-        const newConfig = { ...product.pricingConfig };
+        const newConfig = { ...(product.pricingConfig ?? {}) } as FlexPricingConfig;
         if (type === 'thickness') {
             if (newConfig.pricesByThickness) { const { [variantKey]: _, ...rest } = newConfig.pricesByThickness; newConfig.pricesByThickness = rest; }
             if (newConfig.thicknessOptions) newConfig.thicknessOptions = newConfig.thicknessOptions.filter((t: string) => t !== variantKey);
@@ -283,8 +283,9 @@ export default function Settings() {
                                         <table className="w-full text-left border-collapse">
                                             <tbody className="divide-y divide-white/5 text-sm text-slate-300">
                                                 {categoryProducts.map((product) => {
-                                                    const hasThickness = product.pricingConfig?.thicknessOptions?.length > 0;
-                                                    const hasTypes = Object.keys(product.pricingConfig?.pricesByType || {}).length > 0;
+                                                    const cfg = (product.pricingConfig ?? {}) as FlexPricingConfig;
+                                                    const hasThickness = (cfg.thicknessOptions?.length ?? 0) > 0;
+                                                    const hasTypes = Object.keys(cfg.pricesByType ?? {}).length > 0;
                                                     const hasVariants = hasThickness || hasTypes;
 
                                                     return (
@@ -303,9 +304,9 @@ export default function Settings() {
                                                                     <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteProduct(product.id)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
                                                                 </tr>
                                                             )}
-                                                            {hasThickness && product.pricingConfig.thicknessOptions.map((t: string) => {
+                                                            {hasThickness && cfg.thicknessOptions!.map((t: string) => {
                                                                 const key = `${product.id}:thickness:${t}`;
-                                                                const price = product.pricingConfig.pricesByThickness?.[t] || product.pricePerM2;
+                                                                const price = cfg.pricesByThickness?.[t] ?? product.pricePerM2;
                                                                 return (
                                                                     <tr key={key} className="hover:bg-white/[0.02] group">
                                                                         <td className="p-4 pl-6 text-white font-medium">{product.name} {t}</td>
@@ -320,9 +321,9 @@ export default function Settings() {
                                                                     </tr>
                                                                 )
                                                             })}
-                                                            {hasTypes && Object.keys(product.pricingConfig.pricesByType).map((t: string) => {
+                                                            {hasTypes && Object.keys(cfg.pricesByType!).map((t: string) => {
                                                                 const key = `${product.id}:subtype:${t}`;
-                                                                const price = product.pricingConfig.pricesByType[t];
+                                                                const price = cfg.pricesByType![t];
                                                                 return (
                                                                     <tr key={key} className="hover:bg-white/[0.02] group">
                                                                         <td className="p-4 pl-6 text-white font-medium">{product.name} {t}</td>

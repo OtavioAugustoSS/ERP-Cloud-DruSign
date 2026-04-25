@@ -127,21 +127,21 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
             quantity: newOrder.items[0]?.quantity || 1,
 
             // New Items Array
-            items: newOrder.items.map((i: any) => ({
+            items: newOrder.items.map((i) => ({
                 id: i.id,
-                productId: i.productId,
-                productName: i.product.name,
-                width: i.width || 0,
-                height: i.height || 0,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? undefined,
+                width: i.width ?? 0,
+                height: i.height ?? 0,
                 quantity: i.quantity,
-                serviceType: i.serviceType || undefined,
-                finishing: i.finishing || undefined,
-                instructions: i.instructions || undefined,
-                customDetails: i.customDetails || undefined,
-                observations: i.observations || undefined,
-                unitPrice: i.unitPrice || 0,
-                totalPrice: i.totalPrice || 0,
-                material: i.material || undefined
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                observations: i.observations ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
+                material: i.material ?? undefined,
             }))
         };
 
@@ -170,7 +170,7 @@ export const getPendingOrders = async (): Promise<Order[]> => {
             }
         });
 
-        return orders.map((o: any) => ({
+        return orders.map((o) => ({
             id: o.id,
             clientName: o.clientName || "Cliente",
             clientDocument: o.clientDocument,
@@ -196,20 +196,19 @@ export const getPendingOrders = async (): Promise<Order[]> => {
             quantity: o.items[0]?.quantity || 1,
             instructions: o.items[0]?.instructions || "",
 
-            items: o.items.map((i: any) => ({
+            items: o.items.map((i) => ({
                 id: i.id,
-                productId: i.productId,
-                productName: i.product?.name || "Produto",
-                width: i.width || 0,
-                height: i.height || 0,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? "Produto",
+                width: i.width ?? 0,
+                height: i.height ?? 0,
                 quantity: i.quantity,
-                serviceType: i.serviceType,
-                finishing: i.finishing,
-                instructions: i.instructions,
-                customDetails: i.customDetails,
-                unitPrice: (i.width && i.height && i.product?.pricePerM2)
-                    ? parseFloat(((i.width / 100) * (i.height / 100) * i.product.pricePerM2).toFixed(2))
-                    : 0
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
             }))
         }));
     } catch (error) {
@@ -235,7 +234,7 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
             }
         });
 
-        return orders.map((o: any) => ({
+        return orders.map((o) => ({
             id: o.id,
             clientName: o.clientName || "Cliente",
             clientDocument: o.clientDocument,
@@ -261,20 +260,19 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
             quantity: o.items[0]?.quantity || 1,
             instructions: o.items[0]?.instructions || "",
 
-            items: o.items.map((i: any) => ({
+            items: o.items.map((i) => ({
                 id: i.id,
-                productId: i.productId,
-                productName: i.product?.name || "Produto",
-                width: i.width || 0,
-                height: i.height || 0,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? "Produto",
+                width: i.width ?? 0,
+                height: i.height ?? 0,
                 quantity: i.quantity,
-                serviceType: i.serviceType,
-                finishing: i.finishing,
-                instructions: i.instructions,
-                customDetails: i.customDetails,
-                unitPrice: (i.width && i.height && i.product?.pricePerM2)
-                    ? parseFloat(((i.width / 100) * (i.height / 100) * i.product.pricePerM2).toFixed(2))
-                    : 0
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
             }))
         }));
     } catch (error) {

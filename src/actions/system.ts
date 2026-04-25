@@ -27,10 +27,15 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
         return settings;
     } catch (error) {
         console.error("Error fetching system settings:", error);
-        // Fallback object to prevent UI crash
         return {
             id: 'error',
             companyName: 'Minha Gráfica (Erro)',
+            companyCnpj: null,
+            companyPhone: null,
+            companyEmail: null,
+            companyAddress: null,
+            priceSettings: null,
+            updatedAt: new Date(),
         };
     }
 };
