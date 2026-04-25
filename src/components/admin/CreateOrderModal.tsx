@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Icons } from './Icons';
 import { submitOrder } from '../../actions/order';
 import { formatCurrency } from '@/lib/utils/price';
-import { Loader2 } from 'lucide-react';
-import type { Product } from '../../types';
+import { Loader2, Search, UserRound } from 'lucide-react';
+import type { Product, Client } from '../../types';
 
 interface CreateOrderModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     products: Product[];
+    clients: Client[];
 }
 
 interface OrderItemRow {
@@ -27,10 +28,10 @@ interface OrderItemRow {
     fileUrl?: string;
 }
 
-export default function CreateOrderModal({ isOpen, onClose, onSuccess, products }: CreateOrderModalProps) {
+export default function CreateOrderModal({ isOpen, onClose, onSuccess, products, clients }: CreateOrderModalProps) {
     const [isLoading, setIsLoading] = useState(false);
 
-    // --- SEÇÃO A: DADOS DO CLIENTE (MANUAL) ---
+    // --- SEÇÃO A: DADOS DO CLIENTE ---
     const [clientName, setClientName] = useState('');
     const [clientDocument, setClientDocument] = useState('');
     const [clientIe, setClientIe] = useState('');
@@ -41,6 +42,29 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products 
     const [clientNeighborhood, setClientNeighborhood] = useState('');
     const [clientCity, setClientCity] = useState('');
     const [clientState, setClientState] = useState('');
+
+    // Autocomplete
+    const [clientSearch, setClientSearch] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const autocompleteRef = useRef<HTMLDivElement>(null);
+
+    const suggestions = useMemo(() => {
+        const q = clientSearch.toLowerCase().trim();
+        if (!q || q.length < 2) return [];
+        return clients.filter(c =>
+            c.name.toLowerCase().includes(q) ||
+            c.document?.includes(q) ||
+            c.phone?.includes(q)
+        ).slice(0, 6);
+    }, [clients, clientSearch]);
+
+    function applyClient(c: Client) {
+        setClientName(c.name);
+        setClientDocument(c.document ?? '');
+        setClientPhone(c.phone ?? '');
+        setClientSearch('');
+        setShowSuggestions(false);
+    }
 
     // --- SEÇÃO B: CARRINHO DE ITENS ---
     const [items, setItems] = useState<OrderItemRow[]>([]);
@@ -231,9 +255,44 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products 
 
                         {/* 1. SECTION: CLIENTE */}
                         <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
-                                <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider">1. Dados do Cliente</h3>
+                            <div className="flex items-center justify-between gap-2 mb-6">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
+                                    <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider">1. Dados do Cliente</h3>
+                                </div>
+                                {/* Autocomplete search */}
+                                <div ref={autocompleteRef} className="relative w-72">
+                                    <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-700 rounded-lg h-9 px-3 focus-within:border-blue-500 transition-colors">
+                                        <Search size={13} className="text-zinc-500 shrink-0" />
+                                        <input
+                                            className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
+                                            placeholder="Buscar cliente cadastrado..."
+                                            value={clientSearch}
+                                            onChange={e => { setClientSearch(e.target.value); setShowSuggestions(true); }}
+                                            onFocus={() => setShowSuggestions(true)}
+                                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                                        />
+                                    </div>
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <ul className="absolute top-full mt-1 left-0 right-0 z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+                                            {suggestions.map(c => (
+                                                <li key={c.id}>
+                                                    <button
+                                                        type="button"
+                                                        onMouseDown={() => applyClient(c)}
+                                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-zinc-800 transition-colors"
+                                                    >
+                                                        <UserRound size={14} className="text-blue-400 shrink-0" />
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm text-white truncate">{c.name}</p>
+                                                            {c.document && <p className="text-[10px] text-zinc-500 font-mono">{c.document}</p>}
+                                                        </div>
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">

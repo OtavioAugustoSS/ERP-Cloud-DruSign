@@ -8,7 +8,8 @@ import {
     Settings,
     Users,
     LogOut,
-    History
+    History,
+    UserRound
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -44,6 +45,13 @@ export default function AdminSidebar() {
                     icon={ShoppingCart}
                     label="Pedidos"
                     active={pathname === '/admin/orders' || pathname.startsWith('/admin/orders/')}
+                />
+
+                <NavItem
+                    href="/admin/clients"
+                    icon={UserRound}
+                    label="Clientes"
+                    active={pathname === '/admin/clients'}
                 />
 
                 {isAdmin && (

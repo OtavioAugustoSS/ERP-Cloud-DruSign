@@ -134,6 +134,31 @@ export interface OrderInput {
     instructions?: string;
 }
 
+// ----- Client -----
+export interface Client {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    document?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface CreateClientInput {
+    name: string;
+    email?: string;
+    phone?: string;
+    document?: string;
+}
+
+export interface UpdateClientInput {
+    name?: string;
+    email?: string;
+    phone?: string;
+    document?: string;
+}
+
 // ----- System Settings -----
 // Fields match Prisma's nullable (string | null) return values exactly.
 export interface SystemSettings {

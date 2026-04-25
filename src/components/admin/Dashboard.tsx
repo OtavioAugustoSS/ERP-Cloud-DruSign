@@ -5,14 +5,17 @@ import { Icons } from './Icons';
 import NotificationBell from './NotificationBell';
 import CreateOrderModal from './CreateOrderModal';
 import { getAllProducts } from '../../actions/product';
-import type { Product } from '../../types';
+import { getClients } from '../../actions/client';
+import type { Product, Client } from '../../types';
 
 export default function Dashboard() {
     const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
 
     useEffect(() => {
         getAllProducts().then(data => { if (data) setProducts(data); });
+        getClients().then(data => setClients(data));
     }, []);
 
     return (
@@ -75,6 +78,7 @@ export default function Dashboard() {
                 onClose={() => setIsCreateOrderOpen(false)}
                 onSuccess={() => { }}
                 products={products}
+                clients={clients}
             />
         </div>
     );
