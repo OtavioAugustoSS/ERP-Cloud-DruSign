@@ -159,7 +159,7 @@ export const getPendingOrders = async (): Promise<Order[]> => {
         const orders = await prisma.order.findMany({
             where: {
                 status: {
-                    in: ['PENDING', 'IN_PRODUCTION', 'READY_FOR_SHIPPING']
+                    in: ['PENDING', 'IN_PRODUCTION', 'FINISHING', 'READY_FOR_SHIPPING']
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -300,10 +300,16 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
                 `Novo serviço em produção (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
                 id
             );
+        } else if (status === 'FINISHING') {
+            await createNotification(
+                'employee',
+                `Pedido em acabamento (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
+                id
+            );
         } else if (status === 'READY_FOR_SHIPPING') {
             await createNotification(
                 'admin',
-                `Serviço concluído (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'} está pronto para envio.`,
+                `Pedido pronto para envio (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
                 id
             );
         }

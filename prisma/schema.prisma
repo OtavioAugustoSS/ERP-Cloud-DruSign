@@ -16,12 +16,13 @@ enum UserRole {
   employee
 }
 
-// Os status abaixo refletem o que o código já usa hoje.
-// Uma máquina de transições mais rica (FINISHING, READY_FOR_PICKUP, DELIVERED)
-// será introduzida na FASE 6 do plano de reforma.
+// Máquina de status do pedido (atualizada na FASE 6).
+// Fluxo feliz: PENDING → IN_PRODUCTION → FINISHING → READY_FOR_SHIPPING → COMPLETED
+// CANCELLED pode ser aplicado a partir de qualquer status pelo admin.
 enum OrderStatus {
   PENDING
   IN_PRODUCTION
+  FINISHING
   READY_FOR_SHIPPING
   COMPLETED
   CANCELLED

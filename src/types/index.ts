@@ -14,6 +14,7 @@ export type { PricingConfig, BannerPricingConfig, TypedPricingConfig, ThicknessP
 export const OrderStatus = {
     PENDING: 'PENDING',
     IN_PRODUCTION: 'IN_PRODUCTION',
+    FINISHING: 'FINISHING',
     READY_FOR_SHIPPING: 'READY_FOR_SHIPPING',
     COMPLETED: 'COMPLETED',
     CANCELLED: 'CANCELLED',
