@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Icons } from './Icons';
 import { submitOrder } from '../../actions/order';
-import { getMaterialSettings } from '../../actions/settings';
 import { formatCurrency } from '@/lib/utils/price';
 import { Loader2 } from 'lucide-react';
+import type { Product } from '../../types';
 
 interface CreateOrderModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-    currentUser: any;
+    products: Product[];
 }
 
 interface OrderItemRow {
@@ -27,7 +27,7 @@ interface OrderItemRow {
     fileUrl?: string;
 }
 
-export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUser }: CreateOrderModalProps) {
+export default function CreateOrderModal({ isOpen, onClose, onSuccess, products }: CreateOrderModalProps) {
     const [isLoading, setIsLoading] = useState(false);
 
     // --- SEÇÃO A: DADOS DO CLIENTE (MANUAL) ---
@@ -45,17 +45,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
     // --- SEÇÃO B: CARRINHO DE ITENS ---
     const [items, setItems] = useState<OrderItemRow[]>([]);
 
-    // --- CONFIG MATERIAIS (DINÂMICO) ---
-    const [availableMaterials, setAvailableMaterials] = useState<Record<string, Record<string, number>> | null>(null);
-
-    useEffect(() => {
-        getMaterialSettings().then(setAvailableMaterials);
-    }, []);
-
     // Form Item
-    const [currentCategory, setCurrentCategory] = useState('');
-    const [currentSubtype, setCurrentSubtype] = useState('');
-
+    const [currentProductId, setCurrentProductId] = useState('');
     const [currentFileUrl, setCurrentFileUrl] = useState('');
     const [currentWidth, setCurrentWidth] = useState<number | ''>('');
     const [currentHeight, setCurrentHeight] = useState<number | ''>('');
@@ -72,38 +63,43 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
     const [deliveryDate, setDeliveryDate] = useState('');
     const [notes, setNotes] = useState('');
 
-    // Auto-Calculate Unit Price
-    useEffect(() => {
-        if (availableMaterials && currentCategory && currentSubtype && currentWidth && currentHeight) {
-            const priceSettings = availableMaterials[currentCategory]?.[currentSubtype];
+    const selectedProduct = useMemo(
+        () => products.find(p => p.id === currentProductId) ?? null,
+        [products, currentProductId]
+    );
 
-            if (typeof priceSettings === 'number') {
-                const widthM = Number(currentWidth) / 100;
-                const heightM = Number(currentHeight) / 100;
-                const area = widthM * heightM;
-                const calcPrice = area * priceSettings;
-
-                if (!isNaN(calcPrice)) {
-                    // Minimo R$ 10.00
-                    const finalPrice = calcPrice < 10 ? 10 : calcPrice;
-                    setCurrentUnitPrice(parseFloat(finalPrice.toFixed(2)));
-                }
-            }
+    const categorizedProducts = useMemo(() => {
+        const map = new Map<string, Product[]>();
+        for (const p of products) {
+            if (!map.has(p.category)) map.set(p.category, []);
+            map.get(p.category)!.push(p);
         }
-    }, [availableMaterials, currentCategory, currentSubtype, currentWidth, currentHeight]);
+        return map;
+    }, [products]);
+
+    // Auto-Calculate Unit Price from pricePerM2
+    useEffect(() => {
+        if (selectedProduct && currentWidth && currentHeight) {
+            const widthM = Number(currentWidth) / 100;
+            const heightM = Number(currentHeight) / 100;
+            const area = widthM * heightM;
+            const calcPrice = area * selectedProduct.pricePerM2;
+            const finalPrice = calcPrice < 10 ? 10 : calcPrice;
+            setCurrentUnitPrice(parseFloat(finalPrice.toFixed(2)));
+        }
+    }, [selectedProduct, currentWidth, currentHeight]);
 
     // Add Item
     const handleAddItem = () => {
-        if (!currentCategory || !currentSubtype) return alert("Selecione Categoria e Tipo.");
+        if (!selectedProduct) return alert("Selecione um produto.");
         if (Number(currentQty) <= 0) return alert("Quantidade inválida.");
 
         const price = Number(currentUnitPrice) || 0;
         const total = price * Number(currentQty);
-        const productId = `${currentCategory}-${currentSubtype}`;
 
         const newItem: OrderItemRow = {
-            productId: productId,
-            productName: `${currentCategory} - ${currentSubtype}`,
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
             width: Number(currentWidth) || 0,
             height: Number(currentHeight) || 0,
             quantity: Number(currentQty),
@@ -117,7 +113,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
         setItems([...items, newItem]);
 
         // Reset
-        setCurrentSubtype('');
+        setCurrentProductId('');
         setCurrentWidth('');
         setCurrentHeight('');
         setCurrentQty(1);
@@ -160,7 +156,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
             clientState,
 
             items: items.map(i => ({
-                productId: undefined,
+                productId: i.productId,
                 width: i.width,
                 height: i.height,
                 quantity: i.quantity,
@@ -182,7 +178,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
             notes
         };
 
-        const result = await submitOrder(orderData as any);
+        const result = await submitOrder(orderData);
         setIsLoading(false);
 
         if (result.success) {
@@ -221,7 +217,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
                         </div>
                         <div className="h-8 w-px bg-zinc-800 mx-2 hidden xl:block"></div>
                         <button onClick={onClose} className="group flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
-                            <span className="text-xs font-medium uppercase tracking-wider group-hover:underline">Fechar Escitório</span>
+                            <span className="text-xs font-medium uppercase tracking-wider group-hover:underline">Fechar Escritório</span>
                             <div className="h-8 w-8 rounded-full bg-zinc-800 group-hover:bg-red-500/20 flex items-center justify-center transition-colors">
                                 <Icons.X size={18} />
                             </div>
@@ -293,32 +289,27 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, currentUs
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 relative z-10">
-                                {/* Col 1: Materiais */}
+                                {/* Col 1: Produto */}
                                 <div className="md:col-span-3 space-y-4 border-r border-zinc-800/50 pr-4">
                                     <div>
-                                        <label className="text-[10px] text-blue-400 font-bold uppercase mb-1.5 block">Categoria do serviço</label>
+                                        <label className="text-[10px] text-blue-400 font-bold uppercase mb-1.5 block">Produto / Material</label>
                                         <select className="w-full bg-zinc-950 border border-zinc-700 rounded-lg h-11 px-3 text-sm text-white focus:border-blue-500 outline-none cursor-pointer"
-                                            value={currentCategory} onChange={e => {
-                                                setCurrentCategory(e.target.value);
-                                                setCurrentSubtype('');
-                                            }}>
+                                            value={currentProductId} onChange={e => setCurrentProductId(e.target.value)}>
                                             <option value="">Selecione...</option>
-                                            {availableMaterials && Object.keys(availableMaterials).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] text-blue-400 font-bold uppercase mb-1.5 block">Material / Acabamento</label>
-                                        <select className="w-full bg-zinc-950 border border-zinc-700 rounded-lg h-11 px-3 text-sm text-white focus:border-blue-500 outline-none cursor-pointer disabled:opacity-50"
-                                            value={currentSubtype} onChange={e => setCurrentSubtype(e.target.value)} disabled={!currentCategory}>
-                                            <option value="">Selecione...</option>
-                                            {availableMaterials && currentCategory && availableMaterials[currentCategory] && Object.keys(availableMaterials[currentCategory]).map(sub => (
-                                                <option key={sub} value={sub}>{sub}</option>
+                                            {Array.from(categorizedProducts.entries()).map(([cat, prods]) => (
+                                                <optgroup key={cat} label={cat}>
+                                                    {prods.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                                    ))}
+                                                </optgroup>
                                             ))}
                                         </select>
                                         <div className="text-right mt-1 h-4">
-                                            {currentSubtype && availableMaterials && <span className="text-[10px] text-green-400 font-mono">
-                                                Base: {formatCurrency(availableMaterials[currentCategory]?.[currentSubtype] || 0)}/m²
-                                            </span>}
+                                            {selectedProduct && (
+                                                <span className="text-[10px] text-green-400 font-mono">
+                                                    Base: {formatCurrency(selectedProduct.pricePerM2)}/m²
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

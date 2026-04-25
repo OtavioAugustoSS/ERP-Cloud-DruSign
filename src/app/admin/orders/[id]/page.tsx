@@ -72,11 +72,12 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                 totalPrice: totalPrice,
                 items: [{
                     productId: productId,
-                    width: width / 100, // Convert to meters
+                    width: width / 100,
                     height: height / 100,
                     quantity: quantity,
-                    fileUrl: '', // Could hook into FileHandlerCard later
-                    finalPrice: unitPrice // Per item price or total? usually finalPrice is total for item line
+                    fileUrl: '',
+                    unitPrice: unitPrice,
+                    totalPrice: unitPrice * quantity,
                 }]
             });
             // Redirect happens in server action
