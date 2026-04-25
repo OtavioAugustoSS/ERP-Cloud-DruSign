@@ -356,3 +356,65 @@ export const updateOrderDetails = async (id: string, data: Partial<OrderInput>):
         return { success: false, error: "Erro ao atualizar detalhes do pedido." };
     }
 };
+
+export const getOrderById = async (id: string): Promise<Order | null> => {
+    await requireUser();
+    try {
+        const o = await prisma.order.findUnique({
+            where: { id },
+            include: { items: { include: { product: true } } },
+        });
+        if (!o) return null;
+
+        return {
+            id: o.id,
+            clientName: o.clientName || '',
+            clientDocument: o.clientDocument,
+            clientPhone: o.clientPhone,
+            clientIe: o.clientIe,
+            clientZip: o.clientZip,
+            clientStreet: o.clientStreet,
+            clientNumber: o.clientNumber,
+            clientNeighborhood: o.clientNeighborhood,
+            clientCity: o.clientCity,
+            clientState: o.clientState,
+            serviceValue: o.serviceValue,
+            totalPrice: o.totalPrice,
+            shippingCost: o.shippingCost,
+            discount: o.discount,
+            deliveryDate: o.deliveryDate,
+            approvalDate: o.approvalDate,
+            paymentTerms: o.paymentTerms,
+            deliveryMethod: o.deliveryMethod,
+            notes: o.notes,
+            status: o.status as OrderStatus,
+            createdAt: o.createdAt,
+            filePaths: (o.filePaths as string[]) || [],
+            productId: o.items[0]?.productId || '',
+            productName: o.items[0]?.product?.name || '',
+            width: o.items[0]?.width || 0,
+            height: o.items[0]?.height || 0,
+            quantity: o.items[0]?.quantity || 1,
+            items: o.items.map(i => ({
+                id: i.id,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? undefined,
+                width: i.width ?? 0,
+                height: i.height ?? 0,
+                quantity: i.quantity,
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                observations: i.observations ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
+                material: i.material ?? undefined,
+                fileUrl: i.fileUrl ?? undefined,
+            })),
+        };
+    } catch (error) {
+        console.error('getOrderById error:', error);
+        return null;
+    }
+};
