@@ -28,6 +28,7 @@ interface OrderItemRow {
     observations: string;
     finishing: string;
     thickness?: string;
+    vinylType?: string;
     fileUrl?: string;
 }
 
@@ -42,6 +43,8 @@ const FINISHING_BY_CATEGORY: Record<string, string[]> = {
 const DEFAULT_FINISHINGS = ['Sem acabamento'];
 
 const ACRYLIC_THICKNESSES = ['2mm', '3mm', '4mm', '5mm', '6mm', '8mm', '10mm'];
+
+const VINYL_TYPES = ['Fosco', 'Brilhoso', 'Transparente'];
 
 export default function CreateOrderModal({ isOpen, onClose, onSuccess, products, clients }: CreateOrderModalProps) {
     const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +80,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
     const [currentObs, setCurrentObs] = useState('');
     const [currentFinishing, setCurrentFinishing] = useState('Sem acabamento');
     const [currentThickness, setCurrentThickness] = useState('');
+    const [currentVinylType, setCurrentVinylType] = useState('');
     const [unitPriceTouched, setUnitPriceTouched] = useState(false);
 
     // ───── Financeiro ─────
@@ -139,6 +143,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
         const finishings = FINISHING_BY_CATEGORY[selectedProduct.category] ?? DEFAULT_FINISHINGS;
         setCurrentFinishing(finishings[0]);
         setCurrentThickness('');
+        setCurrentVinylType('');
     }, [selectedProduct]);
 
     // Preenche o preço unitário automaticamente a menos que o usuário tenha digitado manualmente
@@ -196,6 +201,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
         setCurrentFileUrl('');
         setCurrentFinishing('Sem acabamento');
         setCurrentThickness('');
+        setCurrentVinylType('');
         setUnitPriceTouched(false);
         setItemError('');
     }
@@ -230,11 +236,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                 observations: currentObs,
                 finishing: currentFinishing,
                 thickness: currentThickness || undefined,
+                vinylType: currentVinylType || undefined,
                 fileUrl: currentFileUrl || undefined,
             },
         ]);
         resetItemForm();
-    }, [selectedProduct, currentQty, currentUnitPrice, currentWidth, currentHeight, currentObs, currentFinishing, currentThickness, currentFileUrl]);
+    }, [selectedProduct, currentQty, currentUnitPrice, currentWidth, currentHeight, currentObs, currentFinishing, currentThickness, currentVinylType, currentFileUrl]);
 
     const handleRemoveItem = (index: number) => {
         setItems(prev => prev.filter((_, i) => i !== index));
@@ -281,7 +288,10 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                 totalPrice: i.total,
                 observations: i.observations,
                 finishing: i.finishing,
-                customDetails: i.thickness ? `Espessura: ${i.thickness}` : undefined,
+                customDetails: [
+                    i.thickness ? `Espessura: ${i.thickness}` : '',
+                    i.vinylType ? `Tipo: ${i.vinylType}` : '',
+                ].filter(Boolean).join(' | ') || undefined,
                 material: i.productName,
                 fileUrl: i.fileUrl,
             })),
@@ -490,6 +500,29 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                         <p className="mt-1.5 text-[11px] text-emerald-400 font-mono flex items-center gap-1.5">
                                             <Sparkles size={10} /> Base: {formatCurrency(selectedProduct.pricePerM2)} / m²
                                         </p>
+                                    )}
+                                    {selectedProduct?.category === 'ADESIVO' && (
+                                        <div className="mt-3 pt-3 border-t border-zinc-800">
+                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2">
+                                                Tipo de Vinil{!currentVinylType && <span className="text-amber-400 ml-1">*</span>}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {VINYL_TYPES.map(t => (
+                                                    <button
+                                                        key={t}
+                                                        type="button"
+                                                        onClick={() => setCurrentVinylType(t)}
+                                                        className={`px-3 h-7 rounded-full text-[11px] font-medium transition-colors border ${
+                                                            currentVinylType === t
+                                                                ? 'bg-violet-500/20 text-violet-300 border-violet-500/40'
+                                                                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-300'
+                                                        }`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                     {selectedProduct?.category === 'ACRÍLICO' && (
                                         <div className="mt-3 pt-3 border-t border-zinc-800">
@@ -707,6 +740,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                                     {item.thickness && (
                                                         <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
                                                             {item.thickness}
+                                                        </span>
+                                                    )}
+                                                    {item.vinylType && (
+                                                        <span className="text-[10px] text-violet-300 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                                                            {item.vinylType}
                                                         </span>
                                                     )}
                                                     {item.finishing && item.finishing !== 'Sem acabamento' && (
