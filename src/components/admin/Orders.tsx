@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Icons } from './Icons';
 import NotificationBell from './NotificationBell';
 import { useAuth } from '../../context/AuthContext';
-import OrderDetailsModal from './OrderDetailsModal';
 import { getPendingOrders, updateOrderStatus } from '../../actions/order';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import OrderRow from './OrderRow';
@@ -15,19 +14,11 @@ export default function Orders() {
     const [loading, setLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-    // Search & Filter
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Modal State
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-
-    // Filter States
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
     const refreshOrders = async () => {
         setLoading(true);
-        // getPendingOrders already filters for PENDING, IN_PRODUCTION, READY_FOR_SHIPPING
         const data = await getPendingOrders();
         setOrders(data);
         setLoading(false);
@@ -42,8 +33,8 @@ export default function Orders() {
 
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
-            // Employee Security Filter: Only show "IN_PRODUCTION"
-            if (isEmployee && order.status !== OrderStatus.IN_PRODUCTION) {
+            // Funcionário só enxerga pedidos em produção e em acabamento
+            if (isEmployee && order.status !== OrderStatus.IN_PRODUCTION && order.status !== OrderStatus.FINISHING) {
                 return false;
             }
 
@@ -57,11 +48,6 @@ export default function Orders() {
             return matchesSearch && matchesStatus;
         });
     }, [orders, searchTerm, statusFilter, isEmployee]);
-
-    const handleOpenDetails = React.useCallback((order: Order) => {
-        setSelectedOrder(order);
-        setIsDetailsOpen(true);
-    }, []);
 
     const handleStatusUpdate = React.useCallback(async (id: string, newStatus: OrderStatus) => {
         setUpdatingId(id);
@@ -90,10 +76,14 @@ export default function Orders() {
                         )}
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/5 border border-blue-500/10 text-xs text-blue-500">
                             <span className="size-2 rounded-full bg-blue-500"></span>
-                            {orders.filter(o => o.status === OrderStatus.IN_PRODUCTION).length} Em Prod.
+                            {orders.filter(o => o.status === OrderStatus.IN_PRODUCTION).length} Em Produção
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/5 border border-green-500/10 text-xs text-green-500">
-                            <span className="size-2 rounded-full bg-green-500"></span>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/5 border border-purple-500/10 text-xs text-purple-400">
+                            <span className="size-2 rounded-full bg-purple-400"></span>
+                            {orders.filter(o => o.status === OrderStatus.FINISHING).length} Acabamento
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/5 border border-cyan-500/10 text-xs text-cyan-400">
+                            <span className="size-2 rounded-full bg-cyan-400"></span>
                             {orders.filter(o => o.status === OrderStatus.READY_FOR_SHIPPING).length} Pronto p/ Envio
                         </div>
                         <div className="ml-4 pl-4 border-l border-white/10">
@@ -128,6 +118,7 @@ export default function Orders() {
                                 <option value="ALL" className="bg-slate-900 text-white">Todos os Status</option>
                                 <option value={OrderStatus.PENDING} className="bg-slate-900 text-white">Pendente</option>
                                 <option value={OrderStatus.IN_PRODUCTION} className="bg-slate-900 text-white">Em Produção</option>
+                                <option value={OrderStatus.FINISHING} className="bg-slate-900 text-white">Acabamento</option>
                                 <option value={OrderStatus.READY_FOR_SHIPPING} className="bg-slate-900 text-white">Pronto p/ Envio</option>
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
@@ -172,7 +163,6 @@ export default function Orders() {
                                     <OrderRow
                                         key={order.id}
                                         order={order}
-                                        onOpenDetails={handleOpenDetails}
                                         onStatusUpdate={handleStatusUpdate}
                                         updatingId={updatingId}
                                     />
@@ -183,12 +173,6 @@ export default function Orders() {
                 </div>
             </div>
 
-            <OrderDetailsModal
-                isOpen={isDetailsOpen}
-                onClose={() => setIsDetailsOpen(false)}
-                order={selectedOrder}
-                onUpdate={refreshOrders}
-            />
         </div>
     );
 }

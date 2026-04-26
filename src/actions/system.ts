@@ -2,9 +2,11 @@
 
 import prisma from '@/lib/db';
 import { SystemSettings } from '@/types';
+import { requireAdmin, requireUser } from '@/lib/auth/session';
 
 // Get Settings (singleton-like behavior: get first or create default)
 export const getSystemSettings = async (): Promise<SystemSettings> => {
+    await requireUser();
     try {
         const settings = await prisma.systemSettings.findFirst();
 
@@ -25,16 +27,22 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
         return settings;
     } catch (error) {
         console.error("Error fetching system settings:", error);
-        // Fallback object to prevent UI crash
         return {
             id: 'error',
             companyName: 'Minha Gráfica (Erro)',
+            companyCnpj: null,
+            companyPhone: null,
+            companyEmail: null,
+            companyAddress: null,
+            priceSettings: null,
+            updatedAt: new Date(),
         };
     }
 };
 
 // Update Settings
 export const updateSystemSettings = async (data: Partial<SystemSettings>): Promise<{ success: boolean; error?: string }> => {
+    await requireAdmin();
     try {
         const current = await prisma.systemSettings.findFirst();
 

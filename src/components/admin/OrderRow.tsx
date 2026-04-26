@@ -1,16 +1,18 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Icons } from './Icons';
 import { Order, OrderStatus } from '../../types';
 
 interface OrderRowProps {
     order: Order;
-    onOpenDetails: (order: Order) => void;
     onStatusUpdate: (id: string, newStatus: OrderStatus) => void;
     updatingId: string | null;
 }
 
-const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRowProps) => {
+const OrderRow = ({ order, onStatusUpdate, updatingId }: OrderRowProps) => {
+    const router = useRouter();
     const isUpdating = updatingId === order.id;
+    const detailHref = `/admin/orders/${order.id}`;
 
     const renderStatusBadge = (status: OrderStatus) => {
         switch (status) {
@@ -26,6 +28,13 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2"></span>
                         Em Produção
+                    </span>
+                );
+            case OrderStatus.FINISHING:
+                return (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 mr-2 animate-pulse"></span>
+                        Acabamento
                     </span>
                 );
             case OrderStatus.READY_FOR_SHIPPING:
@@ -76,10 +85,28 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
+                            onStatusUpdate(order.id, OrderStatus.FINISHING);
+                        }}
+                        className="flex items-center gap-2 h-9 px-4 rounded-full bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-400 border border-purple-500/20 font-bold text-xs transition-all"
+                        title="Enviar para Acabamento"
+                    >
+                        <span>Iniciar Acabamento</span>
+                        <Icons.PackageCheck size={14} />
+                    </button>
+                </div>
+            );
+        }
+
+        if (order.status === OrderStatus.FINISHING) {
+            return (
+                <div className="flex items-center justify-end gap-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
                             onStatusUpdate(order.id, OrderStatus.READY_FOR_SHIPPING);
                         }}
-                        className="flex items-center gap-2 h-9 px-4 rounded-full bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 border border-blue-500/20 font-bold text-xs transition-all"
-                        title="Marcar como Pronto"
+                        className="flex items-center gap-2 h-9 px-4 rounded-full bg-primary/10 hover:bg-primary hover:text-background-dark text-primary border border-primary/20 font-bold text-xs transition-all"
+                        title="Marcar como Pronto para Envio"
                     >
                         <span>Pronto p/ Envio</span>
                         <Icons.PackageCheck size={14} />
@@ -110,7 +137,10 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
     };
 
     return (
-        <tr className="hover:bg-white/[0.02] transition-colors group">
+        <tr
+            onClick={() => router.push(detailHref)}
+            className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
+        >
             <td className="p-4 pl-6 font-mono text-white">#{order.id.slice(0, 8)}</td>
             <td className="p-4">
                 <div className="flex flex-col">
@@ -150,9 +180,9 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
             <td className="p-4 pr-6 text-right">
                 <div className="flex items-center justify-end gap-3">
                     <button
-                        onClick={() => onOpenDetails(order)}
+                        onClick={(e) => { e.stopPropagation(); router.push(detailHref); }}
                         className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                        title="Ver Detalhes Completo"
+                        title="Ver Detalhes Completos"
                     >
                         <Icons.Visibility size={18} />
                     </button>

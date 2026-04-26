@@ -2,10 +2,12 @@
 
 import prisma from '@/lib/db';
 import { Order, OrderInput, OrderStatus } from '@/types';
+import { requireUser } from '@/lib/auth/session';
 
 const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 export const submitOrder = async (orderData: OrderInput): Promise<{ success: boolean; order?: Order; error?: string }> => {
+    await requireUser();
     try {
         const hasItems = orderData.items && orderData.items.length > 0;
         const hasFlat = !!orderData.productId;
@@ -125,38 +127,39 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
             quantity: newOrder.items[0]?.quantity || 1,
 
             // New Items Array
-            items: newOrder.items.map((i: any) => ({
+            items: newOrder.items.map((i) => ({
                 id: i.id,
-                productId: i.productId,
-                productName: i.product.name,
-                width: i.width || 0,
-                height: i.height || 0,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? undefined,
+                width: i.width ?? 0,
+                height: i.height ?? 0,
                 quantity: i.quantity,
-                serviceType: i.serviceType || undefined,
-                finishing: i.finishing || undefined,
-                instructions: i.instructions || undefined,
-                customDetails: i.customDetails || undefined,
-                observations: i.observations || undefined,
-                unitPrice: i.unitPrice || 0,
-                totalPrice: i.totalPrice || 0,
-                material: i.material || undefined
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                observations: i.observations ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
+                material: i.material ?? undefined,
             }))
         };
 
         return { success: true, order: mappedOrder };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error creating order:", error);
         return { success: false, error: "Erro ao criar pedido." };
     }
 };
 
 export const getPendingOrders = async (): Promise<Order[]> => {
+    await requireUser();
     try {
         const orders = await prisma.order.findMany({
             where: {
                 status: {
-                    in: ['PENDING', 'IN_PRODUCTION', 'READY_FOR_SHIPPING']
+                    in: ['PENDING', 'IN_PRODUCTION', 'FINISHING', 'READY_FOR_SHIPPING']
                 }
             },
             orderBy: { createdAt: 'desc' },
@@ -167,7 +170,7 @@ export const getPendingOrders = async (): Promise<Order[]> => {
             }
         });
 
-        return orders.map((o: any) => ({
+        return orders.map((o) => ({
             id: o.id,
             clientName: o.clientName || "Cliente",
             clientDocument: o.clientDocument,
@@ -193,20 +196,19 @@ export const getPendingOrders = async (): Promise<Order[]> => {
             quantity: o.items[0]?.quantity || 1,
             instructions: o.items[0]?.instructions || "",
 
-            items: o.items.map((i: any) => ({
+            items: o.items.map((i) => ({
                 id: i.id,
-                productId: i.productId,
-                productName: i.product?.name || "Produto",
-                width: i.width || 0,
-                height: i.height || 0,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? "Produto",
+                width: i.width ?? 0,
+                height: i.height ?? 0,
                 quantity: i.quantity,
-                serviceType: i.serviceType,
-                finishing: i.finishing,
-                instructions: i.instructions,
-                customDetails: i.customDetails,
-                unitPrice: (i.width && i.height && i.product?.pricePerM2)
-                    ? parseFloat(((i.width / 100) * (i.height / 100) * i.product.pricePerM2).toFixed(2))
-                    : 0
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
             }))
         }));
     } catch (error) {
@@ -216,6 +218,7 @@ export const getPendingOrders = async (): Promise<Order[]> => {
 };
 
 export const getHistoryOrders = async (): Promise<Order[]> => {
+    await requireUser();
     try {
         const orders = await prisma.order.findMany({
             where: {
@@ -231,7 +234,7 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
             }
         });
 
-        return orders.map((o: any) => ({
+        return orders.map((o) => ({
             id: o.id,
             clientName: o.clientName || "Cliente",
             clientDocument: o.clientDocument,
@@ -257,20 +260,19 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
             quantity: o.items[0]?.quantity || 1,
             instructions: o.items[0]?.instructions || "",
 
-            items: o.items.map((i: any) => ({
+            items: o.items.map((i) => ({
                 id: i.id,
-                productId: i.productId,
-                productName: i.product?.name || "Produto",
-                width: i.width || 0,
-                height: i.height || 0,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? "Produto",
+                width: i.width ?? 0,
+                height: i.height ?? 0,
                 quantity: i.quantity,
-                serviceType: i.serviceType,
-                finishing: i.finishing,
-                instructions: i.instructions,
-                customDetails: i.customDetails,
-                unitPrice: (i.width && i.height && i.product?.pricePerM2)
-                    ? parseFloat(((i.width / 100) * (i.height / 100) * i.product.pricePerM2).toFixed(2))
-                    : 0
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
             }))
         }));
     } catch (error) {
@@ -282,6 +284,7 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
 import { createNotification } from './notification';
 
 export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<{ success: boolean }> => {
+    await requireUser();
     try {
         const order = await prisma.order.update({
             where: { id },
@@ -297,10 +300,16 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
                 `Novo serviço em produção (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
                 id
             );
+        } else if (status === 'FINISHING') {
+            await createNotification(
+                'employee',
+                `Pedido em acabamento (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
+                id
+            );
         } else if (status === 'READY_FOR_SHIPPING') {
             await createNotification(
                 'admin',
-                `Serviço concluído (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'} está pronto para envio.`,
+                `Pedido pronto para envio (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`,
                 id
             );
         }
@@ -313,6 +322,7 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
 };
 
 export const updateOrderDetails = async (id: string, data: Partial<OrderInput>): Promise<{ success: boolean; error?: string }> => {
+    await requireUser();
     try {
         await prisma.order.update({
             where: { id },
@@ -344,5 +354,67 @@ export const updateOrderDetails = async (id: string, data: Partial<OrderInput>):
     } catch (error) {
         console.error("Error updating order details:", error);
         return { success: false, error: "Erro ao atualizar detalhes do pedido." };
+    }
+};
+
+export const getOrderById = async (id: string): Promise<Order | null> => {
+    await requireUser();
+    try {
+        const o = await prisma.order.findUnique({
+            where: { id },
+            include: { items: { include: { product: true } } },
+        });
+        if (!o) return null;
+
+        return {
+            id: o.id,
+            clientName: o.clientName || '',
+            clientDocument: o.clientDocument,
+            clientPhone: o.clientPhone,
+            clientIe: o.clientIe,
+            clientZip: o.clientZip,
+            clientStreet: o.clientStreet,
+            clientNumber: o.clientNumber,
+            clientNeighborhood: o.clientNeighborhood,
+            clientCity: o.clientCity,
+            clientState: o.clientState,
+            serviceValue: o.serviceValue,
+            totalPrice: o.totalPrice,
+            shippingCost: o.shippingCost,
+            discount: o.discount,
+            deliveryDate: o.deliveryDate,
+            approvalDate: o.approvalDate,
+            paymentTerms: o.paymentTerms,
+            deliveryMethod: o.deliveryMethod,
+            notes: o.notes,
+            status: o.status as OrderStatus,
+            createdAt: o.createdAt,
+            filePaths: (o.filePaths as string[]) || [],
+            productId: o.items[0]?.productId || '',
+            productName: o.items[0]?.product?.name || '',
+            width: o.items[0]?.width || 0,
+            height: o.items[0]?.height || 0,
+            quantity: o.items[0]?.quantity || 1,
+            items: o.items.map(i => ({
+                id: i.id,
+                productId: i.productId ?? undefined,
+                productName: i.product?.name ?? undefined,
+                width: i.width ?? 0,
+                height: i.height ?? 0,
+                quantity: i.quantity,
+                serviceType: i.serviceType ?? undefined,
+                finishing: i.finishing ?? undefined,
+                instructions: i.instructions ?? undefined,
+                customDetails: i.customDetails ?? undefined,
+                observations: i.observations ?? undefined,
+                unitPrice: i.unitPrice,
+                totalPrice: i.totalPrice,
+                material: i.material ?? undefined,
+                fileUrl: i.fileUrl ?? undefined,
+            })),
+        };
+    } catch (error) {
+        console.error('getOrderById error:', error);
+        return null;
     }
 };

@@ -3,8 +3,11 @@
 import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/lib/auth/session'
+import { RegisterUserInput, UpdateUserInput } from '@/types'
 
-export async function registerUser(data: any) {
+export async function registerUser(data: RegisterUserInput) {
+    await requireAdmin();
     try {
         const { name, email, password, role, phone, image } = data;
 
@@ -12,10 +15,7 @@ export async function registerUser(data: any) {
             return { error: "Preencha todos os campos obrigatórios." };
         }
 
-        const existingUser = await prisma.user.findUnique({
-            where: { email }
-        });
-
+        const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return { error: "Email já cadastrado." };
         }
@@ -23,14 +23,7 @@ export async function registerUser(data: any) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await prisma.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-                role,
-                phone,
-                image
-            }
+            data: { name, email, password: hashedPassword, role, phone, image }
         });
 
         revalidatePath('/admin/users');
@@ -42,6 +35,7 @@ export async function registerUser(data: any) {
 }
 
 export async function getUsers() {
+    await requireAdmin();
     try {
         const users = await prisma.user.findMany({
             orderBy: { createdAt: 'desc' },
@@ -62,42 +56,34 @@ export async function getUsers() {
     }
 }
 
-export async function updateUser(id: string, data: any) {
+export async function updateUser(id: string, data: UpdateUserInput) {
+    await requireAdmin();
     try {
         const { name, email, role, phone, image, password } = data;
 
-        // Check if email is being changed and if it's taken by another user
         if (email) {
             const existingUser = await prisma.user.findFirst({
-                where: {
-                    email: email,
-                    NOT: {
-                        id: id
-                    }
-                }
+                where: { email, NOT: { id } }
             });
-
             if (existingUser) {
                 return { error: "Este email já está em uso por outro usuário." };
             }
         }
 
-        const updateData: any = {
-            name,
-            email,
-            role,
-            phone,
-            image
-        };
+        const updateData: {
+            name?: string;
+            email?: string;
+            role?: 'admin' | 'employee';
+            phone?: string;
+            image?: string;
+            password?: string;
+        } = { name, email, role, phone, image };
 
         if (password && password.trim() !== '') {
             updateData.password = await bcrypt.hash(password, 10);
         }
 
-        await prisma.user.update({
-            where: { id },
-            data: updateData
-        });
+        await prisma.user.update({ where: { id }, data: updateData });
 
         revalidatePath('/admin/users');
         return { success: "Usuário atualizado!" };
@@ -108,10 +94,9 @@ export async function updateUser(id: string, data: any) {
 }
 
 export async function deleteUser(id: string) {
+    await requireAdmin();
     try {
-        await prisma.user.delete({
-            where: { id }
-        });
+        await prisma.user.delete({ where: { id } });
         revalidatePath('/admin/users');
         return { success: "Usuário removido." };
     } catch (error) {

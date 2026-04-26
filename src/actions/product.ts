@@ -1,17 +1,24 @@
 'use server'
 
+import { Prisma } from '@prisma/client';
 import prisma from '@/lib/db';
-import { Product } from '@/types';
+import { Product, PricingConfig } from '@/types';
 
 import { revalidatePath } from 'next/cache';
+import { requireAdmin, requireUser } from '@/lib/auth/session';
 
 export const getAllProducts = async (): Promise<Product[]> => {
+    await requireUser();
     try {
         const products = await prisma.product.findMany();
-        // Force-refresh cache mechanism (optional, depending on Next.js config)
-        return products.map((p: any) => ({
-            ...p,
-            pricingConfig: p.pricingConfig || {}
+        return products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            pricePerM2: p.pricePerM2,
+            description: p.description,
+            image: p.image,
+            pricingConfig: (p.pricingConfig ?? {}) as PricingConfig,
         }));
     } catch (error) {
         console.error("Error fetching products:", error);
@@ -19,13 +26,18 @@ export const getAllProducts = async (): Promise<Product[]> => {
     }
 };
 
-export const updateProductPricing = async (id: string, newPrice: number, pricingConfig?: any): Promise<{ success: boolean; product?: Product; message?: string }> => {
+export const updateProductPricing = async (
+    id: string,
+    newPrice: number,
+    pricingConfig?: PricingConfig | Record<string, unknown>,
+): Promise<{ success: boolean; product?: Product; message?: string }> => {
+    await requireAdmin();
     try {
         const updated = await prisma.product.update({
             where: { id },
             data: {
                 pricePerM2: newPrice,
-                pricingConfig: pricingConfig
+                pricingConfig: pricingConfig as Prisma.InputJsonValue | undefined,
             }
         });
 
@@ -39,25 +51,28 @@ export const updateProductPricing = async (id: string, newPrice: number, pricing
                 name: updated.name,
                 category: updated.category,
                 pricePerM2: updated.pricePerM2,
-                pricingConfig: updated.pricingConfig
+                pricingConfig: (updated.pricingConfig ?? {}) as PricingConfig,
             }
         };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error updating product:", error);
-        return { success: false, message: error?.message || 'Erro ao atualizar' };
+        return { success: false, message: error instanceof Error ? error.message : 'Erro ao atualizar' };
     }
 };
 
-export const createProduct = async (data: Omit<Product, 'id'>): Promise<{ success: boolean; product?: Product }> => {
+export const createProduct = async (
+    data: Omit<Product, 'id'>,
+): Promise<{ success: boolean; product?: Product }> => {
+    await requireAdmin();
     try {
         const newProduct = await prisma.product.create({
             data: {
                 name: data.name,
                 category: data.category,
                 pricePerM2: data.pricePerM2,
-                pricingConfig: data.pricingConfig,
+                pricingConfig: data.pricingConfig as Prisma.InputJsonValue | undefined,
                 description: data.description,
-                image: data.image
+                image: data.image,
             }
         });
         revalidatePath('/admin/settings');
@@ -69,7 +84,9 @@ export const createProduct = async (data: Omit<Product, 'id'>): Promise<{ succes
                 name: newProduct.name,
                 category: newProduct.category,
                 pricePerM2: newProduct.pricePerM2,
-                pricingConfig: newProduct.pricingConfig
+                description: newProduct.description,
+                image: newProduct.image,
+                pricingConfig: (newProduct.pricingConfig ?? {}) as PricingConfig,
             }
         };
     } catch (error) {
@@ -79,10 +96,9 @@ export const createProduct = async (data: Omit<Product, 'id'>): Promise<{ succes
 };
 
 export const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    await requireAdmin();
     try {
-        await prisma.product.delete({
-            where: { id }
-        });
+        await prisma.product.delete({ where: { id } });
         revalidatePath('/admin/settings');
         revalidatePath('/admin/dashboard');
         return { success: true };

@@ -1,167 +1,220 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import AdminHeader from '@/components/admin/AdminHeader';
-import OrderSpecsCard, { MaterialType } from '@/components/admin/OrderSpecsCard';
-import FileHandlerCard from '@/components/admin/FileHandlerCard';
-import OrderSummaryCard from '@/components/admin/OrderSummaryCard';
-import OrderActionsCard from '@/components/admin/OrderActionsCard';
+import { notFound } from 'next/navigation';
+import { getOrderById } from '@/actions/order';
+import { getSession } from '@/lib/auth/session';
+import { formatCurrency } from '@/lib/utils/price';
 import ProductionPipeline from '@/components/admin/ProductionPipeline';
-import EditableClientName from '@/components/admin/EditableClientName';
-import { Printer } from 'lucide-react';
-import { use } from 'react';
-import { getAllProducts } from '@/actions/product';
-import { submitOrder } from '@/actions/order';
+import OrderDetailActions from '@/components/admin/OrderDetailActions';
+import PrintOrderButton from '@/components/admin/PrintOrderButton';
+import { ArrowLeft, User, MapPin, FileText, Package } from 'lucide-react';
+import Link from 'next/link';
 
-// Duplicate local definition or export from SpecCard. 
-// Ideally export TAB_TO_ID from SpecCard, but for now copying map here to avoid complexity.
-const TAB_TO_ID: Record<MaterialType, string> = {
-    'LONA': 'banner-440',
-    'ADESIVO': 'adesivo-vinil',
-    'ACM': 'chapa-acm',
-    'PVC': 'chapa-pvc',
-    'PS': 'chapa-ps',
-    'ACRÍLICO': 'chapa-acrilico'
+export const dynamic = 'force-dynamic';
+
+const STATUS_LABEL: Record<string, string> = {
+    PENDING: 'Pendente',
+    IN_PRODUCTION: 'Em Produção',
+    FINISHING: 'Acabamento',
+    READY_FOR_SHIPPING: 'Pronto p/ Envio',
+    COMPLETED: 'Concluído',
+    CANCELLED: 'Cancelado',
 };
 
-export default function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-    const unwrappedParams = use(params);
+const STATUS_COLOR: Record<string, string> = {
+    PENDING: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+    IN_PRODUCTION: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    FINISHING: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    READY_FOR_SHIPPING: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    COMPLETED: 'bg-green-500/10 text-green-400 border-green-500/20',
+    CANCELLED: 'bg-red-500/10 text-red-400 border-red-500/20',
+};
 
-    // State for specs
-    const [width, setWidth] = useState(250);
-    const [height, setHeight] = useState(150);
-    const [quantity, setQuantity] = useState(2);
-    const [pricePerM2, setPricePerM2] = useState(50);
+export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const [order, session] = await Promise.all([getOrderById(id), getSession()]);
 
-    // Lifted selection state
-    const [activeTab, setActiveTab] = useState<MaterialType>('LONA');
-    const [serviceType, setServiceType] = useState<string>('Banner Promocional');
-    const [finishing, setFinishing] = useState<string>('Bainha e Ilhós');
-    const [thickness, setThickness] = useState<string>('2mm');
-    const [clientName, setClientName] = useState('Empresa XYZ Ltda.');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    if (!order) notFound();
 
-    // Store fetched products
-    const [products, setProducts] = useState<any[]>([]);
+    const isAdmin = session?.role === 'admin';
+    const isTerminal = order.status === 'COMPLETED' || order.status === 'CANCELLED';
 
-    useEffect(() => {
-        const loadProducts = async () => {
-            const data = await getAllProducts();
-            if (data) setProducts(data);
-        };
-        loadProducts();
-    }, []);
-
-    // Price Calculation Logic
-    const areaInMeters = (width / 100) * (height / 100);
-    const unitPrice = areaInMeters * pricePerM2;
-    const totalPrice = unitPrice * quantity;
-
-    const handleUpdateClientName = (newName: string) => {
-        setClientName(newName);
-        console.log('Updated client name:', newName);
-    };
-
-    const handleSendToProduction = async () => {
-        setIsSubmitting(true);
-        try {
-            const productId = TAB_TO_ID[activeTab];
-
-            await submitOrder({
-                clientName: clientName,
-                totalPrice: totalPrice,
-                items: [{
-                    productId: productId,
-                    width: width / 100, // Convert to meters
-                    height: height / 100,
-                    quantity: quantity,
-                    fileUrl: '', // Could hook into FileHandlerCard later
-                    finalPrice: unitPrice // Per item price or total? usually finalPrice is total for item line
-                }]
-            });
-            // Redirect happens in server action
-        } catch (error) {
-            console.error(error);
-            alert('Falha ao enviar pedido.');
-            setIsSubmitting(false);
-        }
-    };
+    const subtotal = order.items.reduce((acc, i) => acc + i.totalPrice, 0);
+    const shipping = order.shippingCost ?? 0;
+    const discount = order.discount ?? 0;
+    const serviceValue = order.serviceValue ?? 0;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
-            {/* Page Title Area */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-white tracking-tight">Gerenciar Pedido #{unwrappedParams.id || '12345'}</h1>
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
-                            Produção Pendente
-                        </span>
-                    </div>
-                    <div className="pl-1">
-                        <EditableClientName
-                            initialName={clientName}
-                            onSave={handleUpdateClientName}
-                        />
-                    </div>
-                </div>
+        <div className="p-6 max-w-6xl mx-auto space-y-6">
 
-                <div className="flex items-center gap-3">
-                    <button className="px-4 py-2 bg-card-dark hover:bg-white/10 text-white text-sm font-medium rounded-md border border-white/10 transition-colors flex items-center gap-2">
-                        <Printer size={18} />
-                        Ficha de Produção
-                    </button>
+            {/* Cabeçalho */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <Link href="/admin/orders" className="h-9 w-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <ArrowLeft size={18} />
+                    </Link>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-xl font-bold text-white tracking-tight">
+                                Pedido #{order.id.slice(0, 8).toUpperCase()}
+                            </h1>
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${STATUS_COLOR[order.status]}`}>
+                                {STATUS_LABEL[order.status]}
+                            </span>
+                        </div>
+                        <p className="text-sm text-zinc-500 mt-0.5">
+                            Criado em {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </p>
+                    </div>
                 </div>
+                <PrintOrderButton order={order} />
             </div>
 
-            {/* Pipeline Stepper */}
-            <ProductionPipeline />
+            {/* Pipeline */}
+            {!isTerminal && (
+                <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl px-4">
+                    <ProductionPipeline currentStatus={order.status} />
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column: Product Config & Files */}
-                <div className="lg:col-span-2 space-y-6">
-                    <OrderSpecsCard
-                        width={width}
-                        height={height}
-                        quantity={quantity}
-                        activeTab={activeTab}
-                        serviceType={serviceType}
-                        finishing={finishing}
-                        thickness={thickness}
-                        onPriceChange={setPricePerM2}
-                        onWidthChange={setWidth}
-                        onHeightChange={setHeight}
-                        onQuantityChange={setQuantity}
-                        onTabChange={setActiveTab}
-                        onServiceTypeChange={setServiceType}
-                        onFinishingChange={setFinishing}
-                        onThicknessChange={setThickness}
-                        products={products}
-                    />
-                    <FileHandlerCard />
+
+                {/* Coluna Esquerda */}
+                <div className="lg:col-span-2 space-y-5">
+
+                    {/* Itens */}
+                    <section className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden">
+                        <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-800">
+                            <Package size={15} className="text-zinc-400" />
+                            <h2 className="text-sm font-semibold text-zinc-300">Itens do Pedido</h2>
+                            <span className="ml-auto text-xs text-zinc-600">{order.items.length} {order.items.length === 1 ? 'item' : 'itens'}</span>
+                        </div>
+                        <table className="w-full text-sm">
+                            <thead className="bg-black/20 text-[10px] uppercase text-zinc-500 font-bold tracking-wider">
+                                <tr>
+                                    <th className="px-5 py-2.5 text-left">Produto</th>
+                                    <th className="px-4 py-2.5 text-center">Dimensões</th>
+                                    <th className="px-4 py-2.5 text-center">Qtd</th>
+                                    <th className="px-4 py-2.5 text-right">Unitário</th>
+                                    <th className="px-5 py-2.5 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-800/50">
+                                {order.items.map(item => (
+                                    <tr key={item.id} className="hover:bg-zinc-800/20">
+                                        <td className="px-5 py-3">
+                                            <p className="font-medium text-white">{item.productName ?? item.material ?? '—'}</p>
+                                            {item.finishing && <p className="text-xs text-zinc-500">Acabamento: {item.finishing}</p>}
+                                            {item.fileUrl && <p className="text-xs text-blue-400 mt-0.5">Arquivo: {item.fileUrl}</p>}
+                                            {item.observations && <p className="text-xs text-zinc-600 italic mt-0.5">{item.observations}</p>}
+                                        </td>
+                                        <td className="px-4 py-3 text-center font-mono text-zinc-400 text-xs">
+                                            {(item.width ?? 0) > 0 ? `${item.width}×${item.height} cm` : '—'}
+                                        </td>
+                                        <td className="px-4 py-3 text-center text-white font-semibold">{item.quantity}</td>
+                                        <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatCurrency(item.unitPrice)}</td>
+                                        <td className="px-5 py-3 text-right font-mono text-green-400 font-semibold">{formatCurrency(item.totalPrice)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </section>
+
+                    {/* Cliente */}
+                    <section className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 space-y-4">
+                        <div className="flex items-center gap-2 border-b border-zinc-800 pb-3">
+                            <User size={15} className="text-zinc-400" />
+                            <h2 className="text-sm font-semibold text-zinc-300">Dados do Cliente</h2>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                            <Field label="Nome" value={order.clientName} />
+                            <Field label="CPF / CNPJ" value={order.clientDocument} />
+                            <Field label="Telefone" value={order.clientPhone} />
+                            <Field label="IE" value={order.clientIe} />
+                        </div>
+                        {order.clientStreet && (
+                            <>
+                                <div className="flex items-center gap-2 border-t border-zinc-800 pt-3">
+                                    <MapPin size={13} className="text-zinc-500" />
+                                    <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Endereço</span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                                    <Field label="CEP" value={order.clientZip} />
+                                    <Field label="Rua" value={order.clientStreet} className="sm:col-span-2" />
+                                    <Field label="Número" value={order.clientNumber} />
+                                    <Field label="Bairro" value={order.clientNeighborhood} />
+                                    <Field label="Cidade / UF" value={order.clientCity ? `${order.clientCity} / ${order.clientState ?? ''}` : undefined} />
+                                </div>
+                            </>
+                        )}
+                    </section>
+
+                    {/* Observações */}
+                    {order.notes && (
+                        <section className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <FileText size={15} className="text-zinc-400" />
+                                <h2 className="text-sm font-semibold text-zinc-300">Observações Gerais</h2>
+                            </div>
+                            <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-wrap">{order.notes}</p>
+                        </section>
+                    )}
                 </div>
 
-                {/* Right Column: Summary & Actions */}
-                <div className="space-y-6">
-                    <OrderSummaryCard
-                        width={width}
-                        height={height}
-                        quantity={quantity}
-                        totalPrice={totalPrice}
-                        activeTab={activeTab}
-                        serviceType={serviceType}
-                        finishing={finishing}
-                        thickness={thickness}
-                    />
-                    <OrderActionsCard
-                        onSendToProduction={handleSendToProduction}
-                        isSubmitting={isSubmitting}
-                    />
+                {/* Coluna Direita */}
+                <div className="space-y-5">
+
+                    {/* Resumo Financeiro */}
+                    <section className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 space-y-3">
+                        <h2 className="text-sm font-semibold text-zinc-300 border-b border-zinc-800 pb-3">Resumo Financeiro</h2>
+                        <div className="space-y-2 text-sm">
+                            <Row label="Subtotal itens" value={formatCurrency(subtotal)} />
+                            {serviceValue > 0 && <Row label="Mão de obra" value={formatCurrency(serviceValue)} />}
+                            {shipping > 0 && <Row label="Frete / Entrega" value={formatCurrency(shipping)} />}
+                            {discount > 0 && <Row label="Desconto" value={`-${formatCurrency(discount)}`} valueClass="text-red-400" />}
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-zinc-800">
+                            <span className="text-sm font-bold text-white">Total</span>
+                            <span className="text-xl font-bold text-green-400 font-mono">{formatCurrency(order.totalPrice)}</span>
+                        </div>
+                    </section>
+
+                    {/* Logística */}
+                    <section className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 space-y-3">
+                        <h2 className="text-sm font-semibold text-zinc-300 border-b border-zinc-800 pb-3">Logística e Prazos</h2>
+                        <div className="space-y-2 text-sm">
+                            <Field label="Prazo de Entrega" value={order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('pt-BR') : undefined} />
+                            <Field label="Forma de Entrega" value={order.deliveryMethod} />
+                            <Field label="Condições de Pagamento" value={order.paymentTerms} />
+                        </div>
+                    </section>
+
+                    {/* Ações */}
+                    {!isTerminal && (
+                        <OrderDetailActions
+                            orderId={order.id}
+                            currentStatus={order.status}
+                            isAdmin={isAdmin}
+                        />
+                    )}
                 </div>
             </div>
+        </div>
+    );
+}
 
-            {/* Bottom spacing */}
-            <div className="h-12"></div>
+function Field({ label, value, className = '' }: { label: string; value?: string | null; className?: string }) {
+    return (
+        <div className={className}>
+            <p className="text-[10px] text-zinc-600 uppercase font-bold tracking-wider mb-0.5">{label}</p>
+            <p className="text-white">{value || <span className="text-zinc-600">—</span>}</p>
+        </div>
+    );
+}
+
+function Row({ label, value, valueClass = 'text-zinc-300' }: { label: string; value: string; valueClass?: string }) {
+    return (
+        <div className="flex justify-between">
+            <span className="text-zinc-500">{label}</span>
+            <span className={`font-mono ${valueClass}`}>{value}</span>
         </div>
     );
 }

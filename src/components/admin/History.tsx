@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icons } from './Icons';
-import OrderDetailsModal from './OrderDetailsModal';
 import { getHistoryOrders } from '../../actions/order';
 import { Order, OrderStatus } from '../../types';
 import { formatCurrency } from '../../lib/utils/price';
 
 export default function History() {
+    const router = useRouter();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
-
-    // Modal State
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-
-    // Filter States
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -58,8 +52,7 @@ export default function History() {
     };
 
     const handleOpenDetails = (order: Order) => {
-        setSelectedOrder(order);
-        setIsDetailsOpen(true);
+        router.push(`/admin/orders/${order.id}`);
     };
 
     return (
@@ -115,51 +108,58 @@ export default function History() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 text-sm text-slate-300">
-                                {filteredOrders.map((order) => (
-                                    <tr key={order.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="p-4 pl-6 font-mono text-white">#{order.id}</td>
-                                        <td className="p-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-white font-medium">{order.clientName}</span>
-                                                <span className="text-xs text-slate-500">
-                                                    {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-white font-bold text-sm tracking-wide">{order.productName || (order as any).serviceType?.replace('_', ' ') || "Produto Personalizado"}</span>
-                                                <div className="flex items-center gap-2 text-xs text-slate-400">
-                                                    <span>{order.width}x{order.height}cm</span>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-600"></span>
-                                                    <span>{order.quantity}un</span>
+                                {filteredOrders.map((order) => {
+                                    const itemCount = order.items?.length ?? 0;
+                                    const itemLabel = itemCount > 1
+                                        ? `${itemCount} itens no pedido`
+                                        : (order.productName || 'Produto Personalizado');
+                                    return (
+                                        <tr
+                                            key={order.id}
+                                            onClick={() => handleOpenDetails(order)}
+                                            className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                                        >
+                                            <td className="p-4 pl-6 font-mono text-white">#{order.id.slice(0, 8)}</td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-white font-medium">{order.clientName}</span>
+                                                    <span className="text-xs text-slate-500">
+                                                        {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                    </span>
                                                 </div>
-                                                {order.instructions && (
-                                                    <div className="mt-1 text-xs text-cyan-400/80 italic max-w-xs truncate">
-                                                        "{order.instructions}"
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className={`p-4 text-right font-mono ${order.status === OrderStatus.CANCELLED ? 'text-slate-400 line-through' : 'text-white'}`}>
-                                            {formatCurrency(order.totalPrice)}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            {renderStatus(order)}
-                                        </td>
-                                        <td className="p-4 pr-6 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleOpenDetails(order)}
-                                                    className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all"
-                                                    title="Ver Detalhes"
-                                                >
-                                                    <Icons.Visibility size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-white font-bold text-sm tracking-wide">{itemLabel}</span>
+                                                    {itemCount <= 1 && (
+                                                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                            <span>{order.width}x{order.height}cm</span>
+                                                            <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                                                            <span>{order.quantity}un</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className={`p-4 text-right font-mono ${order.status === OrderStatus.CANCELLED ? 'text-slate-400 line-through' : 'text-white'}`}>
+                                                {formatCurrency(order.totalPrice)}
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                {renderStatus(order)}
+                                            </td>
+                                            <td className="p-4 pr-6 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenDetails(order); }}
+                                                        className="size-9 rounded-full bg-transparent hover:bg-white/5 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                                                        title="Ver Detalhes"
+                                                    >
+                                                        <Icons.Visibility size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     )}
@@ -179,11 +179,6 @@ export default function History() {
                 )}
             </div>
 
-            <OrderDetailsModal
-                isOpen={isDetailsOpen}
-                onClose={() => setIsDetailsOpen(false)}
-                order={selectedOrder}
-            />
         </div>
     );
 }

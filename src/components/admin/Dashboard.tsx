@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icons } from './Icons';
 import NotificationBell from './NotificationBell';
-import { useAuth } from '../../context/AuthContext';
 import CreateOrderModal from './CreateOrderModal';
+import { getAllProducts } from '../../actions/product';
+import { getClients } from '../../actions/client';
+import type { Product, Client } from '../../types';
 
 export default function Dashboard() {
-    const { user } = useAuth();
     const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+
+    useEffect(() => {
+        getAllProducts().then(data => { if (data) setProducts(data); });
+        getClients().then(data => setClients(data));
+    }, []);
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-dark bg-grid-subtle">
@@ -68,10 +76,9 @@ export default function Dashboard() {
             <CreateOrderModal
                 isOpen={isCreateOrderOpen}
                 onClose={() => setIsCreateOrderOpen(false)}
-                onSuccess={() => {
-                    // Optional: refresh dashboard stats if we had any
-                }}
-                currentUser={user}
+                onSuccess={() => { }}
+                products={products}
+                clients={clients}
             />
         </div>
     );

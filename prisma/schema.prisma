@@ -9,6 +9,26 @@ generator client {
 }
 
 // ------------------------------
+// Enums
+// ------------------------------
+enum UserRole {
+  admin
+  employee
+}
+
+// Máquina de status do pedido (atualizada na FASE 6).
+// Fluxo feliz: PENDING → IN_PRODUCTION → FINISHING → READY_FOR_SHIPPING → COMPLETED
+// CANCELLED pode ser aplicado a partir de qualquer status pelo admin.
+enum OrderStatus {
+  PENDING
+  IN_PRODUCTION
+  FINISHING
+  READY_FOR_SHIPPING
+  COMPLETED
+  CANCELLED
+}
+
+// ------------------------------
 // 1. Tabela de Usuários (Login)
 // ------------------------------
 model User {
@@ -16,12 +36,12 @@ model User {
   email     String   @unique
   name      String
   password  String   // Senha criptografada (Hash)
-  role      String   @default("employee") // "admin" ou "employee"
+  role      UserRole @default(employee)
   phone     String?  // Contato do usuário
   image     String?  // Foto do perfil
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relacionamentos
   actions   Log[]    // Histórico de ações desse usuário
 
@@ -85,9 +105,9 @@ model Order {
   clientState        String?
 
   filePaths     Json?       // Links dos arquivos anexados (Array de strings)
-  
-  // Status expandido
-  status        String      // "PENDING", "IN_PRODUCTION", "READY_FOR_SHIPPING", "COMPLETED", "CANCELLED"
+
+  // Status do pedido — ver enum OrderStatus acima
+  status        OrderStatus @default(PENDING)
   
   // Financeiro e Prazos
   serviceValue   Float?     @default(0) // Valor apenas do serviço/mão de obra (opcional, se quiser separar)
