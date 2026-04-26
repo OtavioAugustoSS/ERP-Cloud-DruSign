@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
+    ClipboardList,
     ShoppingCart,
     Settings,
     Users,
@@ -37,8 +38,15 @@ export default function AdminSidebar() {
                 <NavItem
                     href="/admin"
                     icon={LayoutDashboard}
-                    label="Novo Pedido"
+                    label="Dashboard"
                     active={pathname === '/admin'}
+                />
+
+                <NavItem
+                    href="/admin/orcamento"
+                    icon={ClipboardList}
+                    label="Orçamento | OS"
+                    active={pathname === '/admin/orcamento'}
                 />
 
                 <NavItem

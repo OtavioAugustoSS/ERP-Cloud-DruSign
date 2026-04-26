@@ -21,11 +21,18 @@ export default function Settings() {
 
     // Add Product Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<'new-product' | 'add-variant'>('new-product');
     const [newProductName, setNewProductName] = useState('');
     const [newProductCategory, setNewProductCategory] = useState('');
     const [newProductPrice, setNewProductPrice] = useState('');
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [isSavingNew, setIsSavingNew] = useState(false);
+
+    // Add Variant Modal State
+    const [variantProductId, setVariantProductId] = useState('');
+    const [variantType, setVariantType] = useState<'thickness' | 'subtype'>('thickness');
+    const [variantName, setVariantName] = useState('');
+    const [variantPrice, setVariantPrice] = useState('');
 
     useEffect(() => {
         loadData();
@@ -141,6 +148,40 @@ export default function Settings() {
         if (!window.confirm('Excluir produto?')) return;
         const result = await deleteProduct(id);
         if (result.success) setProducts(prev => prev.filter(p => p.id !== id));
+    };
+
+    const openAddVariant = (productId: string, type: 'thickness' | 'subtype') => {
+        setModalMode('add-variant');
+        setVariantProductId(productId);
+        setVariantType(type);
+        setVariantName('');
+        setVariantPrice('');
+        setIsAddModalOpen(true);
+    };
+
+    const handleAddVariant = async () => {
+        if (!variantProductId || !variantName.trim() || !variantPrice) return;
+        setIsSavingNew(true);
+        const price = parseFloat(variantPrice.replace(',', '.'));
+        if (isNaN(price)) { setIsSavingNew(false); return; }
+        const product = products.find(p => p.id === variantProductId);
+        if (!product) { setIsSavingNew(false); return; }
+        const newConfig = { ...(product.pricingConfig ?? {}) } as FlexPricingConfig;
+        if (variantType === 'thickness') {
+            if (!newConfig.thicknessOptions?.includes(variantName)) {
+                newConfig.thicknessOptions = [...(newConfig.thicknessOptions ?? []), variantName];
+            }
+            newConfig.pricesByThickness = { ...(newConfig.pricesByThickness ?? {}), [variantName]: price };
+        } else {
+            newConfig.pricesByType = { ...(newConfig.pricesByType ?? {}), [variantName]: price };
+        }
+        const result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
+        if (result.success && result.product) {
+            setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
+            setIsAddModalOpen(false);
+            setVariantProductId(''); setVariantName(''); setVariantPrice('');
+        }
+        setIsSavingNew(false);
     };
 
     const handleDeleteVariant = async (product: Product, type: 'thickness' | 'subtype', variantKey: string) => {
@@ -262,7 +303,7 @@ export default function Settings() {
                             </div>
                         </div>
                         <button
-                            onClick={() => setIsAddModalOpen(true)}
+                            onClick={() => { setModalMode('new-product'); setIsAddModalOpen(true); }}
                             className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-all flex items-center gap-2 group"
                         >
                             <Icons.Plus size={18} /> Novo Material
@@ -294,6 +335,17 @@ export default function Settings() {
 
                                                     return (
                                                         <React.Fragment key={product.id}>
+                                                            {/* Header row for products with variants */}
+                                                            {hasVariants && (
+                                                                <tr className="bg-black/10">
+                                                                    <td colSpan={2} className="px-6 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">{product.name}</td>
+                                                                    <td className="py-2 pr-4 text-center">
+                                                                        <button onClick={() => handleDeleteProduct(product.id)} className="text-slate-700 hover:text-red-500 transition-colors" title="Excluir produto"><Icons.Trash size={14} /></button>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+
+                                                            {/* Base price row (no variants) */}
                                                             {!hasVariants && (
                                                                 <tr className="hover:bg-white/[0.02] group">
                                                                     <td className="p-4 pl-6 text-white font-medium">{product.name}</td>
@@ -305,15 +357,24 @@ export default function Settings() {
                                                                             onBlur={() => handlePriceBlur(product, 'base')}
                                                                         />
                                                                     </td>
-                                                                    <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteProduct(product.id)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
+                                                                    <td className="p-4 w-16 text-center">
+                                                                        <div className="flex items-center justify-center gap-2">
+                                                                            <button onClick={() => openAddVariant(product.id, 'thickness')} className="text-slate-600 hover:text-primary transition-colors" title="Adicionar variação"><Icons.Plus size={15} /></button>
+                                                                            <button onClick={() => handleDeleteProduct(product.id)} className="text-slate-600 hover:text-red-500 transition-colors"><Icons.Trash size={15} /></button>
+                                                                        </div>
+                                                                    </td>
                                                                 </tr>
                                                             )}
+
+                                                            {/* Thickness variant rows */}
                                                             {hasThickness && cfg.thicknessOptions!.map((t: string) => {
                                                                 const key = `${product.id}:thickness:${t}`;
                                                                 const price = cfg.pricesByThickness?.[t] ?? product.pricePerM2;
                                                                 return (
                                                                     <tr key={key} className="hover:bg-white/[0.02] group">
-                                                                        <td className="p-4 pl-6 text-white font-medium">{product.name} {t}</td>
+                                                                        <td className="p-4 pl-10 text-slate-300 flex items-center gap-2">
+                                                                            <span className="text-slate-600 text-xs">┗</span>{t}
+                                                                        </td>
                                                                         <td className="p-4 text-right">
                                                                             <input className={`w-24 bg-black/40 border rounded py-1 px-2 text-right text-white font-mono text-sm outline-none focus:border-primary ${editingValues[key] !== undefined ? 'border-primary' : 'border-white/10'}`}
                                                                                 value={editingValues[key] ?? price.toFixed(2)}
@@ -321,16 +382,29 @@ export default function Settings() {
                                                                                 onBlur={() => handlePriceBlur(product, 'thickness', t)}
                                                                             />
                                                                         </td>
-                                                                        <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteVariant(product, 'thickness', t)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
+                                                                        <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteVariant(product, 'thickness', t)} className="text-slate-600 hover:text-red-500 transition-colors"><Icons.Trash size={15} /></button></td>
                                                                     </tr>
-                                                                )
+                                                                );
                                                             })}
+                                                            {hasThickness && (
+                                                                <tr>
+                                                                    <td colSpan={3} className="px-10 py-2 border-t border-white/5">
+                                                                        <button onClick={() => openAddVariant(product.id, 'thickness')} className="text-xs text-slate-600 hover:text-primary flex items-center gap-1 transition-colors">
+                                                                            <Icons.Plus size={12} /> Adicionar espessura
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+
+                                                            {/* Subtype variant rows */}
                                                             {hasTypes && Object.keys(cfg.pricesByType!).map((t: string) => {
                                                                 const key = `${product.id}:subtype:${t}`;
                                                                 const price = cfg.pricesByType![t];
                                                                 return (
                                                                     <tr key={key} className="hover:bg-white/[0.02] group">
-                                                                        <td className="p-4 pl-6 text-white font-medium">{product.name} {t}</td>
+                                                                        <td className="p-4 pl-10 text-slate-300 flex items-center gap-2">
+                                                                            <span className="text-slate-600 text-xs">┗</span>{t}
+                                                                        </td>
                                                                         <td className="p-4 text-right">
                                                                             <input className={`w-24 bg-black/40 border rounded py-1 px-2 text-right text-white font-mono text-sm outline-none focus:border-primary ${editingValues[key] !== undefined ? 'border-primary' : 'border-white/10'}`}
                                                                                 value={editingValues[key] ?? price.toFixed(2)}
@@ -338,10 +412,19 @@ export default function Settings() {
                                                                                 onBlur={() => handlePriceBlur(product, 'subtype', t)}
                                                                             />
                                                                         </td>
-                                                                        <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteVariant(product, 'subtype', t)} className="text-slate-600 hover:text-red-500"><Icons.Trash size={16} /></button></td>
+                                                                        <td className="p-4 w-10 text-center"><button onClick={() => handleDeleteVariant(product, 'subtype', t)} className="text-slate-600 hover:text-red-500 transition-colors"><Icons.Trash size={15} /></button></td>
                                                                     </tr>
-                                                                )
+                                                                );
                                                             })}
+                                                            {hasTypes && (
+                                                                <tr>
+                                                                    <td colSpan={3} className="px-10 py-2 border-t border-white/5">
+                                                                        <button onClick={() => openAddVariant(product.id, 'subtype')} className="text-xs text-slate-600 hover:text-primary flex items-center gap-1 transition-colors">
+                                                                            <Icons.Plus size={12} /> Adicionar subtipo
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
                                                         </React.Fragment>
                                                     );
                                                 })}
@@ -355,30 +438,117 @@ export default function Settings() {
                 </div>
             </div>
 
-            {/* Add Modal */}
+            {/* Add / Variant Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
-                        <h3 className="text-white font-bold text-lg">Novo Material</h3>
-                        <input value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="Nome" className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white" />
-                        {!isCreatingCategory ? (
-                            <div className="flex gap-2">
-                                <select value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white">
-                                    <option value="">Categoria...</option>
-                                    {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                                <button onClick={() => setIsCreatingCategory(true)} className="bg-white/10 px-3 rounded-lg text-white"><Icons.Plus size={18} /></button>
+                    <div className="bg-surface-dark border border-white/10 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-5">
+
+                        {/* Tab selector */}
+                        <div>
+                            <h3 className="text-white font-bold text-lg mb-3">Gerenciar Materiais</h3>
+                            <div className="flex rounded-xl border border-white/10 overflow-hidden text-sm">
+                                <button
+                                    onClick={() => setModalMode('new-product')}
+                                    className={`flex-1 py-2 font-bold transition-colors ${modalMode === 'new-product' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    Novo Produto
+                                </button>
+                                <button
+                                    onClick={() => setModalMode('add-variant')}
+                                    className={`flex-1 py-2 font-bold transition-colors ${modalMode === 'add-variant' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    Adicionar Variação
+                                </button>
+                            </div>
+                        </div>
+
+                        {modalMode === 'new-product' ? (
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">Nome do Produto</label>
+                                    <input value={newProductName} onChange={e => setNewProductName(e.target.value)} placeholder="Ex: Lona 500g" className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">Categoria</label>
+                                    {!isCreatingCategory ? (
+                                        <div className="flex gap-2">
+                                            <select value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm">
+                                                <option value="">Selecione...</option>
+                                                {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                            <button onClick={() => setIsCreatingCategory(true)} className="bg-white/10 px-3 rounded-lg text-white" title="Nova categoria"><Icons.Plus size={18} /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <input value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} placeholder="Nova Categoria" className="flex-1 bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm" />
+                                            <button onClick={() => setIsCreatingCategory(false)} className="bg-white/10 px-3 rounded-lg text-white"><Icons.Close size={18} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">Preço Base / m²</label>
+                                    <input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Ex: 150.00" className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary" />
+                                </div>
                             </div>
                         ) : (
-                            <div className="flex gap-2">
-                                <input value={newProductCategory} onChange={e => setNewProductCategory(e.target.value)} placeholder="Nova Categoria" className="flex-1 bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white" />
-                                <button onClick={() => setIsCreatingCategory(false)} className="bg-white/10 px-3 rounded-lg text-white"><Icons.Close size={18} /></button>
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">Produto</label>
+                                    <select value={variantProductId} onChange={e => setVariantProductId(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary">
+                                        <option value="">Selecione o produto...</option>
+                                        {products.map(p => <option key={p.id} value={p.id}>{p.name} — {p.category}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">Tipo de variação</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setVariantType('thickness')}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${variantType === 'thickness' ? 'bg-primary/20 border-primary text-primary' : 'bg-black/20 border-white/10 text-slate-400 hover:text-white'}`}
+                                        >
+                                            Espessura
+                                        </button>
+                                        <button
+                                            onClick={() => setVariantType('subtype')}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-colors ${variantType === 'subtype' ? 'bg-primary/20 border-primary text-primary' : 'bg-black/20 border-white/10 text-slate-400 hover:text-white'}`}
+                                        >
+                                            Subtipo
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">
+                                        {variantType === 'thickness' ? 'Espessura' : 'Nome do subtipo'}
+                                    </label>
+                                    <input
+                                        value={variantName}
+                                        onChange={e => setVariantName(e.target.value)}
+                                        placeholder={variantType === 'thickness' ? '12mm' : 'Fosco'}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs uppercase font-bold text-slate-500">Preço / m²</label>
+                                    <input
+                                        type="number"
+                                        value={variantPrice}
+                                        onChange={e => setVariantPrice(e.target.value)}
+                                        placeholder="Ex: 500.00"
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
+                                    />
+                                </div>
                             </div>
                         )}
-                        <input type="number" value={newProductPrice} onChange={e => setNewProductPrice(e.target.value)} placeholder="Preço/m²" className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white" />
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-white">Cancelar</button>
-                            <button onClick={handleCreateProduct} className="px-4 py-2 bg-primary text-black font-bold rounded-lg">{isSavingNew ? '...' : 'Salvar'}</button>
+
+                        <div className="flex justify-end gap-2 pt-1">
+                            <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-slate-400 hover:text-white text-sm transition-colors">Cancelar</button>
+                            <button
+                                onClick={modalMode === 'new-product' ? handleCreateProduct : handleAddVariant}
+                                disabled={isSavingNew}
+                                className="px-5 py-2 bg-primary text-black font-bold rounded-lg text-sm disabled:opacity-50"
+                            >
+                                {isSavingNew ? '...' : 'Salvar'}
+                            </button>
                         </div>
                     </div>
                 </div>

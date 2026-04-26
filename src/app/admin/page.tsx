@@ -1,5 +1,7 @@
-import Dashboard from '@/components/admin/Dashboard';
+import { getDashboardData } from '@/actions/dashboard';
+import DashboardHome from '@/components/admin/DashboardHome';
 
-export default function AdminPage() {
-    return <Dashboard />;
+export default async function AdminPage() {
+    const stats = await getDashboardData();
+    return <DashboardHome stats={stats} />;
 }

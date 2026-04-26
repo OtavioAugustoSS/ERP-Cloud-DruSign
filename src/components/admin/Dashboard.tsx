@@ -25,8 +25,8 @@ export default function Dashboard() {
             <header className="flex-none px-8 py-6 border-b border-white/5 bg-background-dark/80 backdrop-blur-md z-10">
                 <div className="flex flex-wrap justify-between items-center gap-4">
                     <div className="flex flex-col gap-1">
-                        <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Dashboard</h2>
-                        <p className="text-slate-400 text-sm font-normal">Bem-vindo ao painel de controle.</p>
+                        <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Orçamento | Ordem de Serviço</h2>
+                        <p className="text-slate-400 text-sm font-normal">Crie pedidos e gere ordens de serviço.</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right hidden sm:block">

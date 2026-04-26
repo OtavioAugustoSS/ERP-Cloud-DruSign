@@ -28,8 +28,8 @@ const STATUS_COLOR: Record<string, string> = {
     CANCELLED: 'bg-red-500/10 text-red-400 border-red-500/20',
 };
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function OrderDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ from?: string }> }) {
+    const [{ id }, { from }] = await Promise.all([params, searchParams]);
     const [order, session] = await Promise.all([getOrderById(id), getSession()]);
 
     if (!order) notFound();
@@ -43,13 +43,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     const serviceValue = order.serviceValue ?? 0;
 
     return (
+        <div className="h-full overflow-y-auto">
         <div className="p-6 max-w-6xl mx-auto space-y-6">
 
             {/* Cabeçalho */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Link href="/admin/orders" className="h-9 w-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
-                        <ArrowLeft size={18} />
+                    <Link
+                        href={from === 'history' ? '/admin/history' : '/admin/orders'}
+                        className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors text-sm font-medium"
+                    >
+                        <ArrowLeft size={16} />
+                        {from === 'history' ? 'Histórico' : 'Pedidos'}
                     </Link>
                     <div>
                         <div className="flex items-center gap-3">
@@ -102,6 +107,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                                     <tr key={item.id} className="hover:bg-zinc-800/20">
                                         <td className="px-5 py-3">
                                             <p className="font-medium text-white">{item.productName ?? item.material ?? '—'}</p>
+                                            {item.customDetails && <p className="text-xs text-zinc-400 mt-0.5">{item.customDetails}</p>}
                                             {item.finishing && <p className="text-xs text-zinc-500">Acabamento: {item.finishing}</p>}
                                             {item.fileUrl && <p className="text-xs text-blue-400 mt-0.5">Arquivo: {item.fileUrl}</p>}
                                             {item.observations && <p className="text-xs text-zinc-600 italic mt-0.5">{item.observations}</p>}
@@ -197,6 +203,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     )}
                 </div>
             </div>
+        </div>
         </div>
     );
 }

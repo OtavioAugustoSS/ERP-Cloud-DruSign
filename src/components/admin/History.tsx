@@ -52,7 +52,7 @@ export default function History() {
     };
 
     const handleOpenDetails = (order: Order) => {
-        router.push(`/admin/orders/${order.id}`);
+        router.push(`/admin/orders/${order.id}?from=history`);
     };
 
     return (

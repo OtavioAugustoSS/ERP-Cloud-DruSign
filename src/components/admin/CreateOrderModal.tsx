@@ -256,6 +256,14 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
             setItemError('O valor unitário precisa ser maior que zero.');
             return;
         }
+        if (selectedProduct.category === 'ACRÍLICO' && acrylicThicknessOptions.length > 0 && !currentThickness) {
+            setItemError('Selecione a espessura do acrílico antes de adicionar.');
+            return;
+        }
+        if (selectedProduct.category === 'ADESIVO' && !currentVinylType) {
+            setItemError('Selecione o tipo de vinil (fosco/brilhoso/transparente) antes de adicionar.');
+            return;
+        }
 
         const total = price * currentQty;
 
@@ -277,7 +285,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
             },
         ]);
         resetItemForm();
-    }, [selectedProduct, currentQty, currentUnitPrice, currentWidth, currentHeight, currentObs, currentFinishing, currentThickness, currentVinylType, currentFileUrl]);
+    }, [selectedProduct, acrylicThicknessOptions, currentQty, currentUnitPrice, currentWidth, currentHeight, currentObs, currentFinishing, currentThickness, currentVinylType, currentFileUrl]);
 
     const handleRemoveItem = (index: number) => {
         setItems(prev => prev.filter((_, i) => i !== index));
