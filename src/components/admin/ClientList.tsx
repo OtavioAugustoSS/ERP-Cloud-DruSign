@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import React, { useState, useTransition } from 'react';
 import { Loader2, Pencil, Trash2, Plus, Search, UserRound } from 'lucide-react';
 import { createClient, updateClient, deleteClient } from '@/actions/client';
+import { maskDocument, maskPhone } from '@/lib/utils/masks';
 import type { Client } from '@/types';
 
 interface ClientListProps {
@@ -45,8 +46,8 @@ export default function ClientList({ initialClients }: ClientListProps) {
         setForm({
             name: client.name,
             email: client.email ?? '',
-            phone: client.phone ?? '',
-            document: client.document ?? '',
+            phone: maskPhone(client.phone ?? ''),
+            document: maskDocument(client.document ?? ''),
         });
         setError('');
         setModalOpen(true);
@@ -171,8 +172,8 @@ export default function ClientList({ initialClients }: ClientListProps) {
                             )}
 
                             <Field label="Nome *" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="Nome ou razão social" autoFocus />
-                            <Field label="Documento (CPF/CNPJ)" value={form.document} onChange={v => setForm(f => ({ ...f, document: v }))} placeholder="000.000.000-00" />
-                            <Field label="Telefone / WhatsApp" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} placeholder="(00) 00000-0000" />
+                            <Field label="Documento (CPF/CNPJ)" value={form.document} onChange={v => setForm(f => ({ ...f, document: maskDocument(v) }))} placeholder="000.000.000-00" inputMode="numeric" />
+                            <Field label="Telefone / WhatsApp" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: maskPhone(v) }))} placeholder="(00) 00000-0000" inputMode="tel" />
                             <Field label="E-mail" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} placeholder="cliente@email.com" type="email" />
                         </div>
 
@@ -193,9 +194,9 @@ export default function ClientList({ initialClients }: ClientListProps) {
     );
 }
 
-function Field({ label, value, onChange, placeholder, type = 'text', autoFocus }: {
+function Field({ label, value, onChange, placeholder, type = 'text', autoFocus, inputMode }: {
     label: string; value: string; onChange: (v: string) => void;
-    placeholder?: string; type?: string; autoFocus?: boolean;
+    placeholder?: string; type?: string; autoFocus?: boolean; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
     return (
         <div>
@@ -203,6 +204,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', autoFocus }
             <input
                 type={type}
                 autoFocus={autoFocus}
+                inputMode={inputMode}
                 className="w-full bg-black/40 border border-zinc-800 hover:border-zinc-700 focus:border-blue-500 rounded-lg h-10 px-3 text-sm text-white outline-none transition-all placeholder:text-zinc-700"
                 value={value}
                 onChange={e => onChange(e.target.value)}

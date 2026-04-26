@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Icons } from './Icons';
 import { registerUser, deleteUser, updateUser } from '../../actions/user';
+import { maskPhone } from '../../lib/utils/masks';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -51,8 +52,8 @@ export default function UserList({ initialUsers }: UserListProps) {
         setFormData({
             name: user.name,
             email: user.email,
-            password: '', // Password empty on edit unless changing
-            phone: user.phone || '',
+            password: '',
+            phone: maskPhone(user.phone || ''),
             role: user.role,
             image: user.image || ''
         });
@@ -196,7 +197,7 @@ export default function UserList({ initialUsers }: UserListProps) {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-medium text-slate-400 mb-1">Telefone</label>
-                                    <input name="phone" onChange={handleInputChange} value={formData.phone} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary/50 outline-none transition-all" placeholder="(00) 00000-0000" />
+                                    <input name="phone" inputMode="tel" onChange={e => setFormData(f => ({ ...f, phone: maskPhone(e.target.value) }))} value={formData.phone} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-primary/50 outline-none transition-all" placeholder="(00) 00000-0000" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-slate-400 mb-1">Cargo</label>

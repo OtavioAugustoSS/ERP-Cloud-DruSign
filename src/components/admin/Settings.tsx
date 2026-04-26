@@ -5,6 +5,7 @@ import { Icons } from './Icons';
 import { getAllProducts, updateProductPricing, createProduct, deleteProduct } from '../../actions/product';
 import { getSystemSettings, updateSystemSettings } from '../../actions/system';
 import { Product, SystemSettings, FlexPricingConfig } from '../../types';
+import { maskCNPJ, maskPhone } from '../../lib/utils/masks';
 
 export default function Settings() {
     // --- PRODUCT STATE ---
@@ -215,8 +216,9 @@ export default function Settings() {
                                 <input
                                     className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
                                     value={settings.companyCnpj || ''}
-                                    onChange={e => handleSettingChange('companyCnpj', e.target.value)}
+                                    onChange={e => handleSettingChange('companyCnpj', maskCNPJ(e.target.value))}
                                     placeholder="00.000.000/0000-00"
+                                    inputMode="numeric"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -224,7 +226,9 @@ export default function Settings() {
                                 <input
                                     className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary"
                                     value={settings.companyPhone || ''}
-                                    onChange={e => handleSettingChange('companyPhone', e.target.value)}
+                                    onChange={e => handleSettingChange('companyPhone', maskPhone(e.target.value))}
+                                    placeholder="(00) 00000-0000"
+                                    inputMode="tel"
                                 />
                             </div>
                             <div className="space-y-1">

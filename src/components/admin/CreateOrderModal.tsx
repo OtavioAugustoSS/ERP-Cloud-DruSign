@@ -7,7 +7,10 @@ import {
 } from 'lucide-react';
 import { submitOrder } from '@/actions/order';
 import { formatCurrency } from '@/lib/utils/price';
+import { maskCEP, maskDocument, maskPhone } from '@/lib/utils/masks';
+import { fetchAddressByCEP } from '@/lib/utils/viaCEP';
 import type { Product, Client } from '@/types';
+import type { FlexPricingConfig } from '@/types/pricing';
 
 interface CreateOrderModalProps {
     isOpen: boolean;
@@ -42,8 +45,6 @@ const FINISHING_BY_CATEGORY: Record<string, string[]> = {
 };
 const DEFAULT_FINISHINGS = ['Sem acabamento'];
 
-const ACRYLIC_THICKNESSES = ['2mm', '3mm', '4mm', '5mm', '6mm', '8mm', '10mm'];
-
 const VINYL_TYPES = ['Fosco', 'Brilhoso', 'Transparente'];
 
 export default function CreateOrderModal({ isOpen, onClose, onSuccess, products, clients }: CreateOrderModalProps) {
@@ -62,6 +63,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
     const [clientNeighborhood, setClientNeighborhood] = useState('');
     const [clientCity, setClientCity] = useState('');
     const [clientState, setClientState] = useState('');
+
+    const [isLoadingCEP, setIsLoadingCEP] = useState(false);
 
     // ───── Autocomplete cliente ─────
     const [clientSearch, setClientSearch] = useState('');
@@ -124,12 +127,30 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
         return (w / 100) * (h / 100);
     }, [currentWidth, currentHeight]);
 
+    // Espessuras disponíveis vindas do banco (dinâmico, não hardcoded)
+    const acrylicThicknessOptions = useMemo(() => {
+        if (!selectedProduct) return [];
+        const cfg = selectedProduct.pricingConfig as FlexPricingConfig | null;
+        return cfg?.thicknessOptions ?? [];
+    }, [selectedProduct]);
+
+    // Preço/m² efetivo: usa o preço da espessura selecionada quando disponível
+    const effectivePricePerM2 = useMemo(() => {
+        if (!selectedProduct) return 0;
+        if (currentThickness) {
+            const cfg = selectedProduct.pricingConfig as FlexPricingConfig | null;
+            const byThickness = cfg?.pricesByThickness?.[currentThickness];
+            if (byThickness) return byThickness;
+        }
+        return selectedProduct.pricePerM2;
+    }, [selectedProduct, currentThickness]);
+
     const computedUnitPrice = useMemo(() => {
         if (!selectedProduct) return 0;
-        if (area <= 0) return selectedProduct.pricePerM2;
-        const calc = area * selectedProduct.pricePerM2;
+        if (area <= 0) return effectivePricePerM2;
+        const calc = area * effectivePricePerM2;
         return calc < 10 ? 10 : Math.round(calc * 100) / 100;
-    }, [selectedProduct, area]);
+    }, [selectedProduct, area, effectivePricePerM2]);
 
     // Acabamentos disponíveis para o produto selecionado
     const relevantFinishings = useMemo(() => {
@@ -185,10 +206,25 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
     // ───── Ações ─────
     function applyClient(c: Client) {
         setClientName(c.name);
-        setClientDocument(c.document ?? '');
-        setClientPhone(c.phone ?? '');
+        setClientDocument(maskDocument(c.document ?? ''));
+        setClientPhone(maskPhone(c.phone ?? ''));
         setClientSearch('');
         setShowSuggestions(false);
+    }
+
+    async function handleCEPChange(raw: string) {
+        const masked = maskCEP(raw);
+        setClientZip(masked);
+        const digits = raw.replace(/\D/g, '');
+        if (digits.length !== 8) return;
+        setIsLoadingCEP(true);
+        const addr = await fetchAddressByCEP(digits);
+        setIsLoadingCEP(false);
+        if (!addr) return;
+        setClientStreet(addr.logradouro);
+        setClientNeighborhood(addr.bairro);
+        setClientCity(addr.localidade);
+        setClientState(addr.uf);
     }
 
     function resetItemForm() {
@@ -437,8 +473,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                         placeholder="Nome do cliente ou empresa" className={inputBase} autoFocus />
                                 </Field>
                                 <Field label="CPF / CNPJ" className="col-span-6 md:col-span-3">
-                                    <input value={clientDocument} onChange={e => setClientDocument(e.target.value)}
-                                        placeholder="000.000.000-00" className={inputBase} />
+                                    <input value={clientDocument} onChange={e => setClientDocument(maskDocument(e.target.value))}
+                                        placeholder="000.000.000-00" className={inputBase} inputMode="numeric" />
                                 </Field>
                                 <Field label="Insc. Estadual" className="col-span-6 md:col-span-3">
                                     <input value={clientIe} onChange={e => setClientIe(e.target.value)}
@@ -446,12 +482,17 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                 </Field>
 
                                 <Field label="Telefone / WhatsApp" className="col-span-12 md:col-span-3">
-                                    <input value={clientPhone} onChange={e => setClientPhone(e.target.value)}
-                                        placeholder="(00) 00000-0000" className={inputBase} />
+                                    <input value={clientPhone} onChange={e => setClientPhone(maskPhone(e.target.value))}
+                                        placeholder="(00) 00000-0000" className={inputBase} inputMode="tel" />
                                 </Field>
                                 <Field label="CEP" className="col-span-6 md:col-span-2">
-                                    <input value={clientZip} onChange={e => setClientZip(e.target.value)}
-                                        placeholder="00000-000" className={inputBase} />
+                                    <div className="relative">
+                                        <input value={clientZip} onChange={e => handleCEPChange(e.target.value)}
+                                            placeholder="00000-000" className={inputBase} inputMode="numeric" />
+                                        {isLoadingCEP && (
+                                            <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-400 pointer-events-none" />
+                                        )}
+                                    </div>
                                 </Field>
                                 <Field label="Rua" className="col-span-12 md:col-span-5">
                                     <input value={clientStreet} onChange={e => setClientStreet(e.target.value)}
@@ -498,7 +539,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                     </select>
                                     {selectedProduct && (
                                         <p className="mt-1.5 text-[11px] text-emerald-400 font-mono flex items-center gap-1.5">
-                                            <Sparkles size={10} /> Base: {formatCurrency(selectedProduct.pricePerM2)} / m²
+                                            <Sparkles size={10} />
+                                            {currentThickness
+                                                ? <>{currentThickness}: {formatCurrency(effectivePricePerM2)} / m²</>
+                                                : <>Base: {formatCurrency(selectedProduct.pricePerM2)} / m²</>
+                                            }
                                         </p>
                                     )}
                                     {selectedProduct?.category === 'ADESIVO' && (
@@ -524,17 +569,17 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                             </div>
                                         </div>
                                     )}
-                                    {selectedProduct?.category === 'ACRÍLICO' && (
+                                    {selectedProduct?.category === 'ACRÍLICO' && acrylicThicknessOptions.length > 0 && (
                                         <div className="mt-3 pt-3 border-t border-zinc-800">
                                             <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2">
                                                 Espessura{!currentThickness && <span className="text-amber-400 ml-1">*</span>}
                                             </p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {ACRYLIC_THICKNESSES.map(t => (
+                                                {acrylicThicknessOptions.map(t => (
                                                     <button
                                                         key={t}
                                                         type="button"
-                                                        onClick={() => setCurrentThickness(t)}
+                                                        onClick={() => { setCurrentThickness(t); setUnitPriceTouched(false); }}
                                                         className={`px-3 h-7 rounded-full text-[11px] font-medium transition-colors border ${
                                                             currentThickness === t
                                                                 ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'

@@ -1,192 +1,144 @@
-// Declaração do Banco
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-// ------------------------------
-// Enums
-// ------------------------------
-enum UserRole {
-  admin
-  employee
-}
-
-// Máquina de status do pedido (atualizada na FASE 6).
-// Fluxo feliz: PENDING → IN_PRODUCTION → FINISHING → READY_FOR_SHIPPING → COMPLETED
-// CANCELLED pode ser aplicado a partir de qualquer status pelo admin.
-enum OrderStatus {
-  PENDING
-  IN_PRODUCTION
-  FINISHING
-  READY_FOR_SHIPPING
-  COMPLETED
-  CANCELLED
-}
-
-// ------------------------------
-// 1. Tabela de Usuários (Login)
-// ------------------------------
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+model client {
+  id        String   @id
   name      String
-  password  String   // Senha criptografada (Hash)
-  role      UserRole @default(employee)
-  phone     String?  // Contato do usuário
-  image     String?  // Foto do perfil
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  actions   Log[]    // Histórico de ações desse usuário
-
-}
-
-// ------------------------------
-// 2. Tabela de Produtos (Preços)
-// ------------------------------
-model Product {
-  id          String   @id @default(uuid())
-  name        String
-  category    String   // "Lona", "Adesivo", etc.
-  pricePerM2  Float    // Preço base
-  description String?
-  image       String?
-  pricingConfig Json?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  OrderItems OrderItem[]
-}
-
-// ------------------------------
-// 3. Tabela de Clientes (Novo)
-// ------------------------------
-model Client {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?  @unique
+  email     String?  @unique(map: "Client_email_key")
   phone     String?
-  document  String?  // CPF ou CNPJ
-  
-  orders    Order[]
-  
+  document  String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  order     order[]
 }
 
-// ------------------------------
-// 4. Tabela de Pedidos (Histórico)
-// ------------------------------
-model Order {
-  id            String      @id @default(uuid()) // Ex: "ORD-123"
-  
-  // Relacionamento com Cliente (Opcional, pois pode ser venda balcão sem cadastro)
-  clientId      String?
-  client        Client?     @relation(fields: [clientId], references: [id])
-  
-  // Dados do Cliente - SNAPSHOT (Manual)
-  clientName    String?
-  clientDocument String?    // CPF ou CNPJ
-  clientIe      String?     // Inscrição Estadual
-  clientPhone   String?
-  
-  // Endereço do Cliente - SNAPSHOT (Manual)
-  clientZip          String?
-  clientStreet       String?
-  clientNumber       String?
-  clientNeighborhood String?
-  clientCity         String?
-  clientState        String?
+model log {
+  id        String   @id
+  userId    String
+  action    String
+  timestamp DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id], map: "Log_userId_fkey")
 
-  filePaths     Json?       // Links dos arquivos anexados (Array de strings)
-
-  // Status do pedido — ver enum OrderStatus acima
-  status        OrderStatus @default(PENDING)
-  
-  // Financeiro e Prazos
-  serviceValue   Float?     @default(0) // Valor apenas do serviço/mão de obra (opcional, se quiser separar)
-  totalPrice     Float      // Total Geral do Pedido
-  
-  shippingCost    Float      @default(0)
-  discount        Float      @default(0)
-  
-  approvalDate    DateTime?
-  deliveryDate    DateTime?
-  paymentTerms    String?    // Ex: "50% Entrada + 50% Entrega"
-  deliveryMethod  String?
-  
-  notes           String?    // Obs Gerais
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  
-  items         OrderItem[]
+  @@index([userId], map: "Log_userId_fkey")
 }
 
-model OrderItem {
-  id           String  @id @default(uuid())
-  orderId      String
-  order        Order   @relation(fields: [orderId], references: [id])
-  
-  productId    String?
-  product      Product? @relation(fields: [productId], references: [id])
-  
-  width        Float?
-  height       Float?
-  quantity     Int
-  unitPrice    Float   @default(0) // Preço unitário no momento do pedido
-  totalPrice   Float   @default(0) // Total da linha (qtd * unitPrice)
-  
-  serviceType  String? // Ex: "Banner Promocional"
-  finishing    String? // Ex: "Bainha e Ilhós"
-  instructions String?
-  observations String? // Obs técnica específica (Ex: "Com ilhós")
-  customDetails String? // Manter por compatibilidade ou remover depois
-  
-  material     String? // Nome do material/produto textual (snapshot)
-  fileUrl      String? // Link ou Nome do Arquivo da Arte
-}
-
-// ------------------------------
-// 5. Configurações do Sistema (Novo)
-// ------------------------------
-model SystemSettings {
-  id            String   @id @default(uuid())
-  companyName   String   @default("Minha Gráfica")
-  companyCnpj   String?
-  companyPhone  String?
-  companyEmail  String?
-  companyAddress String?
-  priceSettings  String?  // JSON stringified: { "Adesivo": { "Fosco": 65 } }
-  
-  updatedAt     DateTime @updatedAt
-}
-
-// ------------------------------
-// 6. Sistema de Notificações
-// ------------------------------
-model Notification {
-  id            String   @id @default(uuid())
-  recipientRole String   // "admin" or "employee"
+model notification {
+  id            String   @id
+  recipientRole String
   message       String
   read          Boolean  @default(false)
   orderId       String?
   createdAt     DateTime @default(now())
 }
 
-// ------------------------------
-// 7. Logs de Sistema (Opcional)
-// ------------------------------
-model Log {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  action    String   
-  timestamp DateTime @default(now())
+model order {
+  id                 String       @id
+  clientId           String?
+  clientName         String?
+  clientDocument     String?
+  clientIe           String?
+  clientPhone        String?
+  clientZip          String?
+  clientStreet       String?
+  clientNumber       String?
+  clientNeighborhood String?
+  clientCity         String?
+  clientState        String?
+  filePaths          Json?
+  status             order_status @default(PENDING)
+  serviceValue       Float?       @default(0)
+  totalPrice         Float
+  shippingCost       Float        @default(0)
+  discount           Float        @default(0)
+  approvalDate       DateTime?
+  deliveryDate       DateTime?
+  paymentTerms       String?
+  deliveryMethod     String?
+  notes              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime
+  client             client?      @relation(fields: [clientId], references: [id], map: "Order_clientId_fkey")
+  orderitem          orderitem[]
+
+  @@index([clientId], map: "Order_clientId_fkey")
+}
+
+model orderitem {
+  id            String   @id
+  orderId       String
+  productId     String?
+  width         Float?
+  height        Float?
+  quantity      Int
+  unitPrice     Float    @default(0)
+  totalPrice    Float    @default(0)
+  serviceType   String?
+  finishing     String?
+  instructions  String?
+  observations  String?
+  customDetails String?
+  material      String?
+  fileUrl       String?
+  order         order    @relation(fields: [orderId], references: [id], map: "OrderItem_orderId_fkey")
+  product       product? @relation(fields: [productId], references: [id], map: "OrderItem_productId_fkey")
+
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+  @@index([productId], map: "OrderItem_productId_fkey")
+}
+
+model product {
+  id            String      @id
+  name          String
+  category      String
+  pricePerM2    Float
+  description   String?
+  image         String?
+  pricingConfig Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  orderitem     orderitem[]
+}
+
+model systemsettings {
+  id             String   @id
+  companyName    String   @default("Minha Gráfica")
+  companyCnpj    String?
+  companyPhone   String?
+  companyEmail   String?
+  companyAddress String?
+  priceSettings  String?
+  updatedAt      DateTime
+}
+
+model user {
+  id        String    @id
+  email     String    @unique(map: "User_email_key")
+  name      String
+  password  String
+  role      user_role @default(employee)
+  phone     String?
+  image     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+  log       log[]
+}
+
+enum user_role {
+  admin
+  employee
+}
+
+enum order_status {
+  PENDING
+  IN_PRODUCTION
+  FINISHING
+  READY_FOR_SHIPPING
+  COMPLETED
+  CANCELLED
 }
