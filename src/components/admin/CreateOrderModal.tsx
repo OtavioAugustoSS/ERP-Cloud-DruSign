@@ -27,19 +27,21 @@ interface OrderItemRow {
     total: number;
     observations: string;
     finishing: string;
+    thickness?: string;
     fileUrl?: string;
 }
 
-const FINISHING_PRESETS = [
-    'Sem acabamento',
-    'Bainha + Ilhós',
-    'Bainha simples',
-    'Ilhós',
-    'Madeira (vara)',
-    'Solda',
-    'Refile',
-    'Aplicação',
-];
+const FINISHING_BY_CATEGORY: Record<string, string[]> = {
+    'LONA':     ['Sem acabamento', 'Bainha + Ilhós', 'Bainha simples', 'Ilhós', 'Madeira (vara)', 'Solda'],
+    'ACM':      ['Sem acabamento', 'Refile', 'Aplicação'],
+    'ACRÍLICO': ['Sem acabamento', 'Refile'],
+    'ADESIVO':  ['Sem acabamento', 'Aplicação', 'Refile'],
+    'PVC':      ['Sem acabamento', 'Refile'],
+    'PS':       ['Sem acabamento', 'Refile'],
+};
+const DEFAULT_FINISHINGS = ['Sem acabamento'];
+
+const ACRYLIC_THICKNESSES = ['2mm', '3mm', '4mm', '5mm', '6mm', '8mm', '10mm'];
 
 export default function CreateOrderModal({ isOpen, onClose, onSuccess, products, clients }: CreateOrderModalProps) {
     const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +75,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
     const [currentQty, setCurrentQty] = useState(1);
     const [currentUnitPrice, setCurrentUnitPrice] = useState<number | ''>('');
     const [currentObs, setCurrentObs] = useState('');
-    const [currentFinishing, setCurrentFinishing] = useState(FINISHING_PRESETS[0]);
+    const [currentFinishing, setCurrentFinishing] = useState('Sem acabamento');
+    const [currentThickness, setCurrentThickness] = useState('');
     const [unitPriceTouched, setUnitPriceTouched] = useState(false);
 
     // ───── Financeiro ─────
@@ -123,6 +126,20 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
         const calc = area * selectedProduct.pricePerM2;
         return calc < 10 ? 10 : Math.round(calc * 100) / 100;
     }, [selectedProduct, area]);
+
+    // Acabamentos disponíveis para o produto selecionado
+    const relevantFinishings = useMemo(() => {
+        if (!selectedProduct) return DEFAULT_FINISHINGS;
+        return FINISHING_BY_CATEGORY[selectedProduct.category] ?? DEFAULT_FINISHINGS;
+    }, [selectedProduct]);
+
+    // Quando o produto muda, redefine acabamento e espessura para os padrões do novo material
+    useEffect(() => {
+        if (!selectedProduct) return;
+        const finishings = FINISHING_BY_CATEGORY[selectedProduct.category] ?? DEFAULT_FINISHINGS;
+        setCurrentFinishing(finishings[0]);
+        setCurrentThickness('');
+    }, [selectedProduct]);
 
     // Preenche o preço unitário automaticamente a menos que o usuário tenha digitado manualmente
     useEffect(() => {
@@ -177,7 +194,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
         setCurrentUnitPrice('');
         setCurrentObs('');
         setCurrentFileUrl('');
-        setCurrentFinishing(FINISHING_PRESETS[0]);
+        setCurrentFinishing('Sem acabamento');
+        setCurrentThickness('');
         setUnitPriceTouched(false);
         setItemError('');
     }
@@ -211,11 +229,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                 total,
                 observations: currentObs,
                 finishing: currentFinishing,
+                thickness: currentThickness || undefined,
                 fileUrl: currentFileUrl || undefined,
             },
         ]);
         resetItemForm();
-    }, [selectedProduct, currentQty, currentUnitPrice, currentWidth, currentHeight, currentObs, currentFinishing, currentFileUrl]);
+    }, [selectedProduct, currentQty, currentUnitPrice, currentWidth, currentHeight, currentObs, currentFinishing, currentThickness, currentFileUrl]);
 
     const handleRemoveItem = (index: number) => {
         setItems(prev => prev.filter((_, i) => i !== index));
@@ -262,6 +281,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                 totalPrice: i.total,
                 observations: i.observations,
                 finishing: i.finishing,
+                customDetails: i.thickness ? `Espessura: ${i.thickness}` : undefined,
                 material: i.productName,
                 fileUrl: i.fileUrl,
             })),
@@ -471,6 +491,29 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                             <Sparkles size={10} /> Base: {formatCurrency(selectedProduct.pricePerM2)} / m²
                                         </p>
                                     )}
+                                    {selectedProduct?.category === 'ACRÍLICO' && (
+                                        <div className="mt-3 pt-3 border-t border-zinc-800">
+                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mb-2">
+                                                Espessura{!currentThickness && <span className="text-amber-400 ml-1">*</span>}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {ACRYLIC_THICKNESSES.map(t => (
+                                                    <button
+                                                        key={t}
+                                                        type="button"
+                                                        onClick={() => setCurrentThickness(t)}
+                                                        className={`px-3 h-7 rounded-full text-[11px] font-medium transition-colors border ${
+                                                            currentThickness === t
+                                                                ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                                                                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-300'
+                                                        }`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </Field>
 
                                 {/* Arquivo */}
@@ -539,7 +582,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                                 <Wrench size={10} /> Acabamento
                                             </p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {FINISHING_PRESETS.map(f => (
+                                                {relevantFinishings.map((f: string) => (
                                                     <button
                                                         key={f}
                                                         type="button"
@@ -661,7 +704,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess, products,
                                             <td className="p-4 pl-6">
                                                 <p className="font-semibold text-white">{item.productName}</p>
                                                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                                    {item.finishing && item.finishing !== FINISHING_PRESETS[0] && (
+                                                    {item.thickness && (
+                                                        <span className="text-[10px] text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                                                            {item.thickness}
+                                                        </span>
+                                                    )}
+                                                    {item.finishing && item.finishing !== 'Sem acabamento' && (
                                                         <span className="text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                                                             {item.finishing}
                                                         </span>
