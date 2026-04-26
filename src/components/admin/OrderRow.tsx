@@ -1,16 +1,18 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Icons } from './Icons';
 import { Order, OrderStatus } from '../../types';
 
 interface OrderRowProps {
     order: Order;
-    onOpenDetails: (order: Order) => void;
     onStatusUpdate: (id: string, newStatus: OrderStatus) => void;
     updatingId: string | null;
 }
 
-const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRowProps) => {
+const OrderRow = ({ order, onStatusUpdate, updatingId }: OrderRowProps) => {
+    const router = useRouter();
     const isUpdating = updatingId === order.id;
+    const detailHref = `/admin/orders/${order.id}`;
 
     const renderStatusBadge = (status: OrderStatus) => {
         switch (status) {
@@ -135,7 +137,10 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
     };
 
     return (
-        <tr className="hover:bg-white/[0.02] transition-colors group">
+        <tr
+            onClick={() => router.push(detailHref)}
+            className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
+        >
             <td className="p-4 pl-6 font-mono text-white">#{order.id.slice(0, 8)}</td>
             <td className="p-4">
                 <div className="flex flex-col">
@@ -175,9 +180,9 @@ const OrderRow = ({ order, onOpenDetails, onStatusUpdate, updatingId }: OrderRow
             <td className="p-4 pr-6 text-right">
                 <div className="flex items-center justify-end gap-3">
                     <button
-                        onClick={() => onOpenDetails(order)}
+                        onClick={(e) => { e.stopPropagation(); router.push(detailHref); }}
                         className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                        title="Ver Detalhes Completo"
+                        title="Ver Detalhes Completos"
                     >
                         <Icons.Visibility size={18} />
                     </button>

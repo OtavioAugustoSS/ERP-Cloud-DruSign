@@ -147,7 +147,7 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
 
         return { success: true, order: mappedOrder };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error creating order:", error);
         return { success: false, error: "Erro ao criar pedido." };
     }

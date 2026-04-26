@@ -9,7 +9,8 @@ import {
     Users,
     LogOut,
     History,
-    UserRound
+    UserRound,
+    type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -111,7 +112,7 @@ export default function AdminSidebar() {
     );
 }
 
-function NavItem({ href, icon: Icon, label, active, exact }: { href: string; icon: any; label: string; active?: boolean; exact?: boolean }) {
+function NavItem({ href, icon: Icon, label, active }: { href: string; icon: LucideIcon; label: string; active?: boolean }) {
     return (
         <Link
             href={href}
