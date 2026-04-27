@@ -1,28 +1,18 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
-import {
-    Plus, TrendingUp, Users, FileStack, Wallet,
-    Clock, List, AlertTriangle, CheckCircle,
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/price';
 import type { DashboardStats } from '@/actions/dashboard';
+import DashboardClock from './DashboardClock';
+import KpiCards from './KpiCards';
 
-const STATUS_CFG: Record<string, { label: string; bg: string; text: string; border: string; dot: string }> = {
-    PENDING:            { label: 'Aguardando',      bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20', dot: 'bg-yellow-400' },
-    IN_PRODUCTION:      { label: 'Em Produção',     bg: 'bg-blue-500/10',   text: 'text-blue-400',   border: 'border-blue-500/20',   dot: 'bg-blue-400'   },
-    FINISHING:          { label: 'Acabamento',      bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20', dot: 'bg-purple-400' },
-    READY_FOR_SHIPPING: { label: 'Pronto p/ Envio', bg: 'bg-cyan-500/10',   text: 'text-cyan-400',   border: 'border-cyan-500/20',   dot: 'bg-cyan-400'   },
-    COMPLETED:          { label: 'Concluído',       bg: 'bg-green-500/10',  text: 'text-green-400',  border: 'border-green-500/20',  dot: 'bg-green-400'  },
-    CANCELLED:          { label: 'Cancelado',       bg: 'bg-red-500/10',    text: 'text-red-400',    border: 'border-red-500/20',    dot: 'bg-red-400'    },
+const STATUS_CFG: Record<string, { label: string; dot: string; text: string; badge: string }> = {
+    PENDING:            { label: 'Aguardando',      dot: 'bg-yellow-400', text: 'text-yellow-400', badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+    IN_PRODUCTION:      { label: 'Em Produção',     dot: 'bg-blue-400',   text: 'text-blue-400',   badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20'     },
+    FINISHING:          { label: 'Acabamento',      dot: 'bg-purple-400', text: 'text-purple-400', badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20'},
+    READY_FOR_SHIPPING: { label: 'Pronto p/ Envio', dot: 'bg-cyan-400',   text: 'text-cyan-400',   badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'     },
+    COMPLETED:          { label: 'Concluído',       dot: 'bg-green-400',  text: 'text-green-400',  badge: 'bg-green-500/10 text-green-400 border-green-500/20'  },
+    CANCELLED:          { label: 'Cancelado',       dot: 'bg-red-400',    text: 'text-red-400',    badge: 'bg-red-500/10 text-red-400 border-red-500/20'        },
 };
-
-function timeAgo(iso: string): string {
-    const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000);
-    if (h < 1) return 'agora';
-    if (h < 24) return `há ${h}h`;
-    const d = Math.floor(h / 24);
-    return d === 1 ? 'ontem' : `há ${d} dias`;
-}
 
 function fmtDate(iso: string): string {
     return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
@@ -36,82 +26,49 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-background-dark">
 
             {/* ── Header ── */}
-            <header className="flex-none px-8 py-6 border-b border-white/5 bg-background-dark/80 backdrop-blur-md z-10">
+            <header className="flex-none px-8 py-4 border-b border-white/5 bg-background-dark/80 backdrop-blur-md z-10 shrink-0">
                 <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Dashboard</h2>
-                        <p className="text-slate-400 text-sm mt-0.5 capitalize">{monthLabel} · Visão geral</p>
+                    <div className="flex items-center gap-3">
+                        <span className="text-white text-xl font-extrabold tracking-tight leading-none">
+                            Dru<span className="text-primary">Sign</span>
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase tracking-wider font-bold">
+                            Admin
+                        </span>
+                        <div className="w-px h-5 bg-white/10 mx-1" />
+                        <div>
+                            <h2 className="text-white text-base font-bold leading-tight">Dashboard</h2>
+                            <p className="text-slate-500 text-[11px] capitalize leading-tight">{monthLabel} · Visão geral</p>
+                        </div>
                     </div>
-                    <Link
-                        href="/admin/orcamento"
-                        className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-background-dark font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20 text-sm"
-                    >
-                        <Plus size={16} />
-                        Novo Pedido
-                    </Link>
+                    <div className="flex items-center gap-5">
+                        <DashboardClock />
+                        <Link
+                            href="/admin/orcamento"
+                            className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-background-dark font-bold px-4 py-2 rounded-xl transition-all shadow-lg shadow-primary/20 text-sm"
+                        >
+                            <Plus size={15} />
+                            Novo Pedido
+                        </Link>
+                    </div>
                 </div>
             </header>
 
-            {/* ── Scroll ── */}
+            {/* ── Scroll area ── */}
             <div className="flex-1 overflow-y-auto p-8 space-y-6">
 
-                {/* ── KPIs ── métricas do mês, nenhuma repetida nos blocos abaixo */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-                    {/* Receita do mês */}
-                    <KpiCard
-                        label="Receita do Mês"
-                        icon={<Wallet size={16} />}
-                        color="green"
-                        sub="pedidos concluídos"
-                    >
-                        <span className="text-xl font-bold font-mono text-white leading-tight">
-                            {formatCurrency(stats.monthRevenue)}
-                        </span>
-                    </KpiCard>
-
-                    {/* Pedidos criados no mês */}
-                    <KpiCard
-                        label="Pedidos no Mês"
-                        icon={<FileStack size={16} />}
-                        color="blue"
-                        sub="todos os status"
-                    >
-                        <span className="text-4xl font-bold font-mono text-white">{stats.ordersThisMonth}</span>
-                    </KpiCard>
-
-                    {/* Ticket médio do mês */}
-                    <KpiCard
-                        label="Ticket Médio"
-                        icon={<TrendingUp size={16} />}
-                        color="purple"
-                        sub="pedidos deste mês"
-                    >
-                        <span className="text-xl font-bold font-mono text-white leading-tight">
-                            {stats.avgTicketMonth > 0 ? formatCurrency(stats.avgTicketMonth) : '—'}
-                        </span>
-                    </KpiCard>
-
-                    {/* Total de clientes cadastrados */}
-                    <KpiCard
-                        label="Clientes Cadastrados"
-                        icon={<Users size={16} />}
-                        color="cyan"
-                        sub="base total"
-                    >
-                        <span className="text-4xl font-bold font-mono text-white">{stats.totalClients}</span>
-                    </KpiCard>
-                </div>
+                {/* ── KPIs animados ── */}
+                <KpiCards stats={stats} />
 
                 {/* ── Status + Pedidos Recentes ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* Status de Produção */}
-                    <div className="lg:col-span-5 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                            <Clock size={13} /> Status de Produção
+                    <div className="lg:col-span-5 bg-surface-dark/50 border border-white/5 rounded-2xl p-6 flex flex-col">
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4 shrink-0">
+                            Status de Produção
                         </h3>
-                        <div className="space-y-3">
+                        <div className="flex-1 flex flex-col justify-evenly">
                             {(
                                 [
                                     ['PENDING',            stats.byStatus.PENDING],
@@ -122,12 +79,12 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                             ).map(([status, count]) => {
                                 const s = STATUS_CFG[status];
                                 return (
-                                    <div key={status} className={`flex items-center justify-between px-4 py-3.5 rounded-xl border ${s.bg} ${s.border}`}>
+                                    <div key={status} className="flex items-center justify-between py-2">
                                         <div className="flex items-center gap-3">
                                             <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${s.dot}`} />
-                                            <span className={`text-sm font-medium ${s.text}`}>{s.label}</span>
+                                            <span className="text-sm text-slate-300">{s.label}</span>
                                         </div>
-                                        <span className={`text-2xl font-bold font-mono ${s.text}`}>{count}</span>
+                                        <span className={`text-3xl font-bold font-mono ${s.text}`}>{count}</span>
                                     </div>
                                 );
                             })}
@@ -137,8 +94,8 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                     {/* Pedidos Recentes */}
                     <div className="lg:col-span-7 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                <List size={13} /> Pedidos Recentes
+                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Pedidos Recentes
                             </h3>
                             <Link href="/admin/orders" className="text-xs text-primary hover:underline">
                                 ver todos →
@@ -148,31 +105,34 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                         {stats.recentOrders.length === 0 ? (
                             <p className="text-slate-500 text-sm text-center py-6">Nenhum pedido ainda.</p>
                         ) : (
-                            <div className="space-y-1">
+                            <div>
+                                <div className="grid grid-cols-[7rem_1fr_auto_5rem] gap-3 pb-2 border-b border-white/5 mb-1">
+                                    {['OS#', 'Cliente', 'Status', 'Valor'].map(h => (
+                                        <span key={h} className="text-[10px] font-bold text-slate-500 uppercase tracking-wider last:text-right">
+                                            {h}
+                                        </span>
+                                    ))}
+                                </div>
                                 {stats.recentOrders.map(order => {
                                     const s = STATUS_CFG[order.status] ?? STATUS_CFG.PENDING;
-                                    const initials = (order.clientName ?? 'NA')
-                                        .split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
                                     return (
                                         <Link
                                             key={order.id}
                                             href={`/admin/orders/${order.id}`}
-                                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors"
+                                            className="grid grid-cols-[7rem_1fr_auto_5rem] gap-3 items-center py-2.5 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg px-1"
                                         >
-                                            <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
-                                                {initials}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-white font-medium truncate">
-                                                    {order.clientName ?? 'Cliente'}
-                                                </p>
-                                                <p className="text-[11px] text-slate-500 font-mono">
-                                                    #{order.id.slice(0, 8)} · {timeAgo(order.createdAt)}
-                                                </p>
-                                            </div>
-                                            <div className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${s.bg} ${s.text} ${s.border}`}>
+                                            <span className="text-[11px] font-mono text-slate-400 truncate">
+                                                #{order.id.slice(0, 8)}
+                                            </span>
+                                            <span className="text-sm text-white font-medium truncate">
+                                                {order.clientName ?? 'Cliente'}
+                                            </span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${s.badge}`}>
                                                 {s.label}
-                                            </div>
+                                            </span>
+                                            <span className="text-[11px] font-mono text-slate-400 text-right tabular-nums">
+                                                {formatCurrency(order.totalPrice)}
+                                            </span>
                                         </Link>
                                     );
                                 })}
@@ -181,12 +141,12 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                     </div>
                 </div>
 
-                {/* ── Top Materiais + Prazo ── */}
+                {/* ── Top Materiais + Entregas ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* Top Materiais */}
                     <div className="lg:col-span-4 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-5">
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-5">
                             Top Materiais em Produção
                         </h3>
                         {stats.topMaterials.length === 0 ? (
@@ -200,7 +160,7 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                                             <span className="text-xs text-slate-500 font-mono tabular-nums">{mat.pct}%</span>
                                         </div>
                                         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-primary rounded-full" style={{ width: `${mat.pct}%` }} />
+                                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${mat.pct}%` }} />
                                         </div>
                                     </div>
                                 ))}
@@ -208,25 +168,21 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                         )}
                     </div>
 
-                    {/* Entregas com prazo */}
+                    {/* Entregas com Prazo Próximo */}
                     <div className="lg:col-span-8 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
-                        <div className="flex items-center gap-3 mb-5">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                <AlertTriangle size={13} className="text-amber-400" />
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                 Entregas com Prazo Próximo
                             </h3>
                             {stats.alertOrders.length > 0 && (
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                    {stats.alertOrders.length}
+                                    {stats.alertOrders.length} alerta{stats.alertOrders.length > 1 ? 's' : ''}
                                 </span>
                             )}
                         </div>
 
                         {stats.alertOrders.length === 0 ? (
-                            <div className="flex items-center justify-center gap-3 py-8">
-                                <CheckCircle size={18} className="text-green-400" />
-                                <p className="text-slate-400 text-sm">Nenhuma entrega vencendo hoje.</p>
-                            </div>
+                            <p className="text-slate-500 text-sm text-center py-8">Nenhuma entrega vencendo hoje.</p>
                         ) : (
                             <div className="space-y-2">
                                 {stats.alertOrders.map(o => {
@@ -236,17 +192,14 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                                         <Link
                                             key={o.id}
                                             href={`/admin/orders/${o.id}`}
-                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 transition-colors"
+                                            className={`flex items-center justify-between px-4 py-3 rounded-r-xl border-l-4 hover:bg-white/5 transition-colors ${isOverdue ? 'border-red-500 bg-red-500/5' : 'border-amber-500 bg-amber-500/5'}`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <AlertTriangle size={14} className={isOverdue ? 'text-red-400' : 'text-amber-400'} />
-                                                <div>
-                                                    <p className="text-sm text-white font-medium">{o.clientName ?? 'Cliente'}</p>
-                                                    <p className="text-[11px] text-slate-500 font-mono">#{o.id.slice(0, 8)}</p>
-                                                </div>
+                                            <div>
+                                                <p className="text-sm text-white font-medium">{o.clientName ?? 'Cliente'}</p>
+                                                <p className="text-[11px] text-slate-500 font-mono">#{o.id.slice(0, 8)}</p>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${s.bg} ${s.text} ${s.border}`}>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.badge}`}>
                                                     {s.label}
                                                 </span>
                                                 <span className={`text-xs font-mono font-bold tabular-nums ${isOverdue ? 'text-red-400' : 'text-amber-400'}`}>
@@ -261,32 +214,6 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                     </div>
                 </div>
             </div>
-        </div>
-    );
-}
-
-function KpiCard({ label, icon, color, sub, children }: {
-    label: string;
-    icon: ReactNode;
-    color: 'blue' | 'purple' | 'cyan' | 'green';
-    sub?: string;
-    children: ReactNode;
-}) {
-    const iconClass = {
-        blue:   'bg-blue-500/10 text-blue-400 border-blue-500/20',
-        purple: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-        cyan:   'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-        green:  'bg-green-500/10 text-green-400 border-green-500/20',
-    }[color];
-
-    return (
-        <div className="bg-surface-dark/50 border border-white/5 rounded-2xl p-5 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
-                <div className={`p-2 rounded-lg border ${iconClass}`}>{icon}</div>
-            </div>
-            {children}
-            {sub && <p className="text-[11px] text-slate-600 leading-tight">{sub}</p>}
         </div>
     );
 }
