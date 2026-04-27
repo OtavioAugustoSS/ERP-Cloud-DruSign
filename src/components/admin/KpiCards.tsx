@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { formatCurrency } from '@/lib/utils/price';
 import type { DashboardStats } from '@/actions/dashboard';
+import { GlowingEffect } from '@/components/ui/glowing-effect';
 
 type Color = 'green' | 'blue' | 'purple' | 'cyan';
 
@@ -73,13 +74,23 @@ function KpiCard({
             variants={card}
             whileHover={{
                 y: -5,
-                boxShadow: `0 12px 48px ${c.glow}, 0 0 0 1px ${c.border}`,
                 transition: { duration: 0.2, ease: 'easeOut' },
             }}
-            className="relative bg-surface-dark/50 border border-white/5 rounded-2xl p-5 flex flex-col gap-2.5 overflow-hidden cursor-default"
+            className="relative bg-surface-dark/50 border border-white/5 rounded-2xl p-5 flex flex-col gap-2.5 cursor-default group"
         >
-            {/* Blob decorativo no canto */}
-            <div className={`absolute -bottom-6 -right-6 w-32 h-32 rounded-full blur-3xl opacity-[0.07] pointer-events-none ${c.blob}`} />
+            <GlowingEffect 
+                spread={80}
+                glow={true}
+                disabled={false}
+                proximity={120}
+                inactiveZone={0.01}
+                borderWidth={2}
+            />
+
+            {/* Blob decorativo no canto com seu próprio overflow-hidden para não cortar a borda brilhante do card */}
+            <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                <div className={`absolute -bottom-6 -right-6 w-32 h-32 rounded-full blur-3xl opacity-[0.07] ${c.blob}`} />
+            </div>
 
             {/* Label com dot pulsante */}
             <div className="flex items-center gap-2 relative z-10">

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -10,7 +12,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
+
   --color-primary: #13a4ec;
   --color-primary-hover: #0f8cc9;
   --color-background-dark: #0f0f0f; 
@@ -18,8 +20,20 @@
   --color-card-dark: #262626;
   --color-input-bg: #333333;
   --color-text-secondary: #a3a3a3;
-  
+
   --shadow-glow: 0 0 15px rgba(19, 164, 236, 0.3);
+
+  --animate-ripple: ripple var(--duration, 2s) ease calc(var(--i, 0) * 0.2s) infinite;
+
+  @keyframes ripple {
+    0%,
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,4 +57,40 @@ body {
       transparent 1px
     ),
     linear-gradient(to bottom, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+}
+
+/* Custom Loader from Uiverse.io by Shoh2008 */
+.loader {
+  display: block;
+  width: 84px;
+  height: 84px;
+  position: relative;
+}
+
+.loader:before , .loader:after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #22d3ee; /* Cyan para combinar com o tema */
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+  transform: translate(-50% , -100%)  scale(0);
+  animation: push_401 2s infinite linear;
+}
+
+.loader:after {
+  animation-delay: 1s;
+}
+
+@keyframes push_401 {
+  0% , 50% {
+    transform: translate(-50% , 0%)  scale(1)
+  }
+
+  100% {
+    transform: translate(-50%, -100%) scale(0)
+  }
 }

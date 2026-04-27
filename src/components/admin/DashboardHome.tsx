@@ -1,9 +1,60 @@
+"use client";
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/price';
 import type { DashboardStats } from '@/actions/dashboard';
 import DashboardClock from './DashboardClock';
 import KpiCards from './KpiCards';
+import { GlowingEffect } from '@/components/ui/glowing-effect';
+
+function useCountUp(target: number, duration = 1400) {
+    const [current, setCurrent] = useState(0);
+
+    useEffect(() => {
+        if (target === 0) { setCurrent(0); return; }
+        let startTime: number | null = null;
+        function easeOutQuart(x: number) { return 1 - Math.pow(1 - x, 4); }
+        function step(ts: number) {
+            if (!startTime) startTime = ts;
+            const progress = Math.min((ts - startTime) / duration, 1);
+            setCurrent(target * easeOutQuart(progress));
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        const id = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(id);
+    }, [target, duration]);
+
+    return current;
+}
+
+function AnimatedCount({ value }: { value: number }) {
+    const current = useCountUp(value, 1500);
+    return <>{Math.round(current)}</>;
+}
+
+function AnimatedMaterialItem({ mat, index }: { mat: { name: string, pct: number }, index: number }) {
+    const currentPct = useCountUp(mat.pct, 1500);
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm text-slate-300 truncate max-w-[75%]">{mat.name}</span>
+                <span className="text-xs text-slate-500 font-mono tabular-nums">{Math.round(currentPct)}%</span>
+            </div>
+            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                    className="h-full bg-primary rounded-full" 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${mat.pct}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut", delay: index * 0.1 }}
+                />
+            </div>
+        </div>
+    );
+}
 
 const STATUS_CFG: Record<string, { label: string; dot: string; text: string; badge: string }> = {
     PENDING:            { label: 'Aguardando',      dot: 'bg-yellow-400', text: 'text-yellow-400', badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
@@ -64,11 +115,12 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* Status de Produção */}
-                    <div className="lg:col-span-5 bg-surface-dark/50 border border-white/5 rounded-2xl p-6 flex flex-col">
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4 shrink-0">
+                    <div className="lg:col-span-5 bg-surface-dark/50 border border-white/5 rounded-2xl p-6 flex flex-col relative group">
+                        <GlowingEffect spread={80} glow={true} disabled={false} proximity={120} inactiveZone={0.01} borderWidth={2} />
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4 shrink-0 relative z-10">
                             Status de Produção
                         </h3>
-                        <div className="flex-1 flex flex-col justify-evenly">
+                            <div className="flex-1 flex flex-col justify-evenly relative z-10">
                             {(
                                 [
                                     ['PENDING',            stats.byStatus.PENDING],
@@ -84,7 +136,9 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                                             <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${s.dot}`} />
                                             <span className="text-sm text-slate-300">{s.label}</span>
                                         </div>
-                                        <span className={`text-3xl font-bold font-mono ${s.text}`}>{count}</span>
+                                        <span className={`text-3xl font-bold font-mono ${s.text}`}>
+                                            <AnimatedCount value={count} />
+                                        </span>
                                     </div>
                                 );
                             })}
@@ -92,8 +146,9 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                     </div>
 
                     {/* Pedidos Recentes */}
-                    <div className="lg:col-span-7 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-5">
+                    <div className="lg:col-span-7 bg-surface-dark/50 border border-white/5 rounded-2xl p-6 relative group">
+                        <GlowingEffect spread={80} glow={true} disabled={false} proximity={120} inactiveZone={0.01} borderWidth={2} />
+                        <div className="flex items-center justify-between mb-5 relative z-10">
                             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                 Pedidos Recentes
                             </h3>
@@ -103,9 +158,9 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                         </div>
 
                         {stats.recentOrders.length === 0 ? (
-                            <p className="text-slate-500 text-sm text-center py-6">Nenhum pedido ainda.</p>
+                            <p className="text-slate-500 text-sm text-center py-6 relative z-10">Nenhum pedido ainda.</p>
                         ) : (
-                            <div>
+                            <div className="relative z-10">
                                 <div className="grid grid-cols-[7rem_1fr_auto_5rem] gap-3 pb-2 border-b border-white/5 mb-1">
                                     {['OS#', 'Cliente', 'Status', 'Valor'].map(h => (
                                         <span key={h} className="text-[10px] font-bold text-slate-500 uppercase tracking-wider last:text-right">
@@ -145,32 +200,26 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* Top Materiais */}
-                    <div className="lg:col-span-4 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-5">
+                    <div className="lg:col-span-4 bg-surface-dark/50 border border-white/5 rounded-2xl p-6 relative group">
+                        <GlowingEffect spread={80} glow={true} disabled={false} proximity={120} inactiveZone={0.01} borderWidth={2} />
+                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-5 relative z-10">
                             Top Materiais em Produção
                         </h3>
                         {stats.topMaterials.length === 0 ? (
-                            <p className="text-slate-500 text-sm text-center py-6">Nenhum item em produção.</p>
+                            <p className="text-slate-500 text-sm text-center py-6 relative z-10">Nenhum item em produção.</p>
                         ) : (
-                            <div className="space-y-4">
-                                {stats.topMaterials.map(mat => (
-                                    <div key={mat.name}>
-                                        <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-sm text-slate-300 truncate max-w-[75%]">{mat.name}</span>
-                                            <span className="text-xs text-slate-500 font-mono tabular-nums">{mat.pct}%</span>
-                                        </div>
-                                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${mat.pct}%` }} />
-                                        </div>
-                                    </div>
+                            <div className="space-y-4 relative z-10">
+                                {stats.topMaterials.map((mat, i) => (
+                                    <AnimatedMaterialItem key={mat.name} mat={mat} index={i} />
                                 ))}
                             </div>
                         )}
                     </div>
 
                     {/* Entregas com Prazo Próximo */}
-                    <div className="lg:col-span-8 bg-surface-dark/50 border border-white/5 rounded-2xl p-6">
-                        <div className="flex items-center justify-between mb-5">
+                    <div className="lg:col-span-8 bg-surface-dark/50 border border-white/5 rounded-2xl p-6 relative group">
+                        <GlowingEffect spread={80} glow={true} disabled={false} proximity={120} inactiveZone={0.01} borderWidth={2} />
+                        <div className="flex items-center justify-between mb-5 relative z-10">
                             <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                 Entregas com Prazo Próximo
                             </h3>
@@ -182,9 +231,9 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                         </div>
 
                         {stats.alertOrders.length === 0 ? (
-                            <p className="text-slate-500 text-sm text-center py-8">Nenhuma entrega vencendo hoje.</p>
+                            <p className="text-slate-500 text-sm text-center py-8 relative z-10">Nenhuma entrega vencendo hoje.</p>
                         ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative z-10">
                                 {stats.alertOrders.map(o => {
                                     const s = STATUS_CFG[o.status] ?? STATUS_CFG.PENDING;
                                     const isOverdue = new Date(o.deliveryDate) < now;

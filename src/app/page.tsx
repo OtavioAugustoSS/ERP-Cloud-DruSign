@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import LoginPage from '../components/auth/LoginPage';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import GlobalLoader from '../components/ui/GlobalLoader';
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -16,7 +17,7 @@ export default function Home() {
   }, [user, isLoading, router]);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-background-dark flex items-center justify-center text-white">Carregando...</div>;
+    return <div className="min-h-screen bg-background-dark flex items-center justify-center text-white"><GlobalLoader /></div>;
   }
 
   if (!user) {

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icons } from './Icons';
 import { getHistoryOrders } from '../../actions/order';
+import GlobalLoader from '../ui/GlobalLoader';
 import { Order, OrderStatus } from '../../types';
 import { formatCurrency } from '../../lib/utils/price';
 
@@ -88,7 +89,7 @@ export default function History() {
             <div className="flex-1 overflow-auto p-8 pt-4">
                 <div className="w-full rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-2xl">
                     {loading ? (
-                        <div className="p-12 text-center text-slate-400">Carregando histórico...</div>
+                        <div className="p-12 flex justify-center"><GlobalLoader text="CARREGANDO HISTÓRICO..." /></div>
                     ) : filteredOrders.length === 0 ? (
                         <div className="p-12 text-center text-slate-400 flex flex-col items-center gap-2">
                             <Icons.History size={48} className="text-slate-600 mb-2" />

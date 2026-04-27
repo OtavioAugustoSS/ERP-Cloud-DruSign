@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Icons } from './Icons';
 import { getAllProducts, updateProductPricing, createProduct, deleteProduct } from '../../actions/product';
 import { getSystemSettings, updateSystemSettings } from '../../actions/system';
+import GlobalLoader from '../ui/GlobalLoader';
 import { Product, SystemSettings, FlexPricingConfig } from '../../types';
 import { maskCNPJ, maskPhone } from '../../lib/utils/masks';
 
@@ -241,7 +242,7 @@ export default function Settings() {
                     </div>
 
                     {loadingSettings ? (
-                        <div className="text-slate-500 text-sm">Carregando dados...</div>
+                        <div className="flex justify-center py-8"><GlobalLoader text="CARREGANDO DADOS..." /></div>
                     ) : settings && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1">
@@ -311,7 +312,7 @@ export default function Settings() {
                     </div>
 
                     {loadingProducts ? (
-                        <div className="text-center text-slate-400">Carregando materias...</div>
+                        <div className="flex justify-center py-12"><GlobalLoader text="CARREGANDO MATERIAIS..." /></div>
                     ) : (
                         <div className="space-y-6">
                             {uniqueCategories.sort().map(category => {

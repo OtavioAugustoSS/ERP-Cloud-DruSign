@@ -4,6 +4,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import GlobalLoader from '@/components/ui/GlobalLoader';
 
 export default function AdminLayout({
     children,
@@ -20,7 +21,7 @@ export default function AdminLayout({
     }, [user, isLoading, router]);
 
     if (isLoading) {
-        return <div className="flex h-screen items-center justify-center bg-background-dark text-white">Carregando...</div>;
+        return <div className="flex h-screen items-center justify-center bg-background-dark text-white"><GlobalLoader /></div>;
     }
 
     if (!user) return null;
