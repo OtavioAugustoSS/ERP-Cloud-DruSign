@@ -26,7 +26,7 @@ export default function AdminSidebar() {
 
     return (
         /* Ocupa 64px no layout — a sidebar visual cresce em overlay */
-        <aside className="relative w-16 shrink-0 z-20 h-screen">
+        <aside className="relative w-16 shrink-0 z-30 h-screen">
             <div className="group/sidebar absolute left-0 top-0 bottom-0 w-16 hover:w-56 bg-surface-dark border-r border-white/5 flex flex-col overflow-hidden shadow-2xl shadow-black/30 transition-[width] duration-300 ease-in-out">
 
                 {/* Logo: cross-fade entre "DS" (recolhida) e "DruSign" (expandida) */}
