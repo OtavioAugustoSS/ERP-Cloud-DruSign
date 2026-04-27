@@ -5,7 +5,7 @@ import { Icons } from './Icons';
 import NotificationBell from './NotificationBell';
 import { useAuth } from '../../context/AuthContext';
 import { getPendingOrders, updateOrderStatus } from '../../actions/order';
-import LoadingScreen from '../../components/ui/LoadingScreen';
+import GlobalLoader from '../ui/GlobalLoader';
 import OrderRow from './OrderRow';
 import { Order, OrderStatus } from '../../types';
 
@@ -143,7 +143,7 @@ export default function Orders() {
                 <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl">
                     {loading ? (
                         <div className="p-12 flex justify-center">
-                            <LoadingScreen />
+                            <GlobalLoader text="CARREGANDO PEDIDOS..." />
                         </div>
                     ) : filteredOrders.length === 0 ? (
                         <div className="p-12 text-center text-slate-400">Nenhum pedido encontrado.</div>

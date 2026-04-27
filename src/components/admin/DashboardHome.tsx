@@ -1,60 +1,11 @@
-"use client";
-
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/price';
 import type { DashboardStats } from '@/actions/dashboard';
 import DashboardClock from './DashboardClock';
 import KpiCards from './KpiCards';
 import { GlowingEffect } from '@/components/ui/glowing-effect';
-
-function useCountUp(target: number, duration = 1400) {
-    const [current, setCurrent] = useState(0);
-
-    useEffect(() => {
-        if (target === 0) { setCurrent(0); return; }
-        let startTime: number | null = null;
-        function easeOutQuart(x: number) { return 1 - Math.pow(1 - x, 4); }
-        function step(ts: number) {
-            if (!startTime) startTime = ts;
-            const progress = Math.min((ts - startTime) / duration, 1);
-            setCurrent(target * easeOutQuart(progress));
-            if (progress < 1) requestAnimationFrame(step);
-        }
-        const id = requestAnimationFrame(step);
-        return () => cancelAnimationFrame(id);
-    }, [target, duration]);
-
-    return current;
-}
-
-function AnimatedCount({ value }: { value: number }) {
-    const current = useCountUp(value, 1500);
-    return <>{Math.round(current)}</>;
-}
-
-function AnimatedMaterialItem({ mat, index }: { mat: { name: string, pct: number }, index: number }) {
-    const currentPct = useCountUp(mat.pct, 1500);
-
-    return (
-        <div>
-            <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm text-slate-300 truncate max-w-[75%]">{mat.name}</span>
-                <span className="text-xs text-slate-500 font-mono tabular-nums">{Math.round(currentPct)}%</span>
-            </div>
-            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
-                    className="h-full bg-primary rounded-full" 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${mat.pct}%` }}
-                    transition={{ duration: 1.5, ease: "easeOut", delay: index * 0.1 }}
-                />
-            </div>
-        </div>
-    );
-}
+import { AnimatedCount, AnimatedMaterialItem } from './DashboardAnimations';
 
 const STATUS_CFG: Record<string, { label: string; dot: string; text: string; badge: string }> = {
     PENDING:            { label: 'Aguardando',      dot: 'bg-yellow-400', text: 'text-yellow-400', badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
@@ -108,7 +59,7 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
             {/* ── Scroll area ── */}
             <div className="flex-1 overflow-y-auto p-8 space-y-6">
 
-                {/* ── KPIs animados ── */}
+                {/* ── KPIs animados (client component) ── */}
                 <KpiCards stats={stats} />
 
                 {/* ── Status + Pedidos Recentes ── */}
@@ -120,7 +71,7 @@ export default function DashboardHome({ stats }: { stats: DashboardStats }) {
                         <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4 shrink-0 relative z-10">
                             Status de Produção
                         </h3>
-                            <div className="flex-1 flex flex-col justify-evenly relative z-10">
+                        <div className="flex-1 flex flex-col justify-evenly relative z-10">
                             {(
                                 [
                                     ['PENDING',            stats.byStatus.PENDING],
