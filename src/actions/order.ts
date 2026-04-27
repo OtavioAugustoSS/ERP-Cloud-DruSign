@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/db';
 import { Order, OrderInput, OrderStatus } from '@/types';
-import { requireUser } from '@/lib/auth/session';
+import { requireUser, requireAdmin } from '@/lib/auth/session';
 
 const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
@@ -153,7 +153,7 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
     }
 };
 
-export const getPendingOrders = async (): Promise<Order[]> => {
+export const getPendingOrders = async (take = 100, skip = 0): Promise<Order[]> => {
     await requireUser();
     try {
         const orders = await prisma.order.findMany({
@@ -163,6 +163,8 @@ export const getPendingOrders = async (): Promise<Order[]> => {
                 }
             },
             orderBy: { createdAt: 'desc' },
+            take,
+            skip,
             include: {
                 items: {
                     include: { product: true }
@@ -217,7 +219,7 @@ export const getPendingOrders = async (): Promise<Order[]> => {
     }
 };
 
-export const getHistoryOrders = async (): Promise<Order[]> => {
+export const getHistoryOrders = async (take = 200, skip = 0): Promise<Order[]> => {
     await requireUser();
     try {
         const orders = await prisma.order.findMany({
@@ -227,6 +229,8 @@ export const getHistoryOrders = async (): Promise<Order[]> => {
                 }
             },
             orderBy: { createdAt: 'desc' },
+            take,
+            skip,
             include: {
                 items: {
                     include: { product: true }
@@ -322,7 +326,7 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
 };
 
 export const updateOrderDetails = async (id: string, data: Partial<OrderInput>): Promise<{ success: boolean; error?: string }> => {
-    await requireUser();
+    await requireAdmin();
     try {
         await prisma.order.update({
             where: { id },

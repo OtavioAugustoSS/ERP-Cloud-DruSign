@@ -14,6 +14,8 @@ function redirectToLogin(req: NextRequest, clearCookie = false): NextResponse {
     return response;
 }
 
+const ADMIN_ONLY_PATHS = ['/admin/settings', '/admin/users'];
+
 export async function middleware(req: NextRequest) {
     const secret = process.env.JWT_SECRET;
     if (!secret || secret.length < 32) {
@@ -24,7 +26,16 @@ export async function middleware(req: NextRequest) {
     if (!token) return redirectToLogin(req);
 
     try {
-        await jwtVerify(token, new TextEncoder().encode(secret));
+        const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+
+        const isAdminOnly = ADMIN_ONLY_PATHS.some(p => req.nextUrl.pathname.startsWith(p));
+        if (isAdminOnly && payload.role !== 'admin') {
+            const url = req.nextUrl.clone();
+            url.pathname = '/admin';
+            url.search = '';
+            return NextResponse.redirect(url);
+        }
+
         return NextResponse.next();
     } catch {
         return redirectToLogin(req, true);

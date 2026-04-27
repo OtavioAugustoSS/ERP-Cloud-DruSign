@@ -7,9 +7,31 @@ import { SignJWT } from 'jose'
 import { getJwtSecret, getSession } from '@/lib/auth/session'
 import type { SessionUser, User, UserRole } from '@/types/auth'
 
+// In-memory rate limiter: max 5 attempts per email per 15 min
+const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000;
+
+function checkRateLimit(key: string): boolean {
+    const now = Date.now();
+    const rec = loginAttempts.get(key);
+    if (!rec || now - rec.firstAttempt > WINDOW_MS) {
+        loginAttempts.set(key, { count: 1, firstAttempt: now });
+        return true;
+    }
+    if (rec.count >= MAX_ATTEMPTS) return false;
+    rec.count++;
+    return true;
+}
+
 export async function login(email: string, password: string): Promise<{ user: User } | { error: string }> {
     if (!email || !password) {
         return { error: 'Email e senha são obrigatórios' }
+    }
+
+    const key = email.toLowerCase().trim();
+    if (!checkRateLimit(key)) {
+        return { error: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.' }
     }
 
     try {
@@ -18,6 +40,9 @@ export async function login(email: string, password: string): Promise<{ user: Us
 
         const isValid = await bcrypt.compare(password, user.password)
         if (!isValid) return { error: 'Credenciais inválidas' }
+
+        // Clear attempts on success
+        loginAttempts.delete(key);
 
         const token = await new SignJWT({
             id: user.id,

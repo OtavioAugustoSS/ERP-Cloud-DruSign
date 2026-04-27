@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/db';
-import { requireUser } from '@/lib/auth/session';
+import { requireUser, requireAdmin } from '@/lib/auth/session';
 import type { Client, CreateClientInput, UpdateClientInput } from '@/types';
 
 export async function getClients(): Promise<Client[]> {
@@ -57,11 +57,12 @@ export async function createClient(
     }
 }
 
+// Admin only — editing client data is sensitive
 export async function updateClient(
     id: string,
     input: UpdateClientInput
 ): Promise<{ success: boolean; error?: string }> {
-    await requireUser();
+    await requireAdmin();
     try {
         await prisma.client.update({
             where: { id },
@@ -83,10 +84,11 @@ export async function updateClient(
     }
 }
 
+// Admin only — irreversible operation
 export async function deleteClient(
     id: string
 ): Promise<{ success: boolean; error?: string }> {
-    await requireUser();
+    await requireAdmin();
     try {
         await prisma.client.delete({ where: { id } });
         return { success: true };
