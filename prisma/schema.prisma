@@ -8,18 +8,26 @@ datasource db {
 }
 
 model client {
-  id        String   @id
-  name      String
-  email     String?  @unique(map: "Client_email_key")
-  phone     String?
-  document  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-  order     order[]
+  id           String   @id @default(uuid())
+  name         String
+  email        String?  @unique(map: "Client_email_key")
+  phone        String?
+  document     String?
+  ie           String?
+  zip          String?
+  street       String?
+  number       String?
+  neighborhood String?
+  city         String?
+  state        String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  order        order[]
 }
 
 model log {
-  id        String   @id
+  id        String   @id @default(uuid())
   userId    String
   action    String
   timestamp DateTime @default(now())
@@ -29,7 +37,7 @@ model log {
 }
 
 model notification {
-  id            String   @id
+  id            String   @id @default(uuid())
   recipientRole String
   message       String
   read          Boolean  @default(false)
@@ -38,7 +46,7 @@ model notification {
 }
 
 model order {
-  id                 String       @id
+  id                 String       @id @default(uuid())
   clientId           String?
   clientName         String?
   clientDocument     String?
@@ -62,7 +70,7 @@ model order {
   deliveryMethod     String?
   notes              String?
   createdAt          DateTime     @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime     @updatedAt
   client             client?      @relation(fields: [clientId], references: [id], map: "Order_clientId_fkey")
   orderitem          orderitem[]
 
@@ -70,7 +78,7 @@ model order {
 }
 
 model orderitem {
-  id            String   @id
+  id            String   @id @default(uuid())
   orderId       String
   productId     String?
   width         Float?
@@ -93,7 +101,7 @@ model orderitem {
 }
 
 model product {
-  id            String      @id
+  id            String      @id @default(uuid())
   name          String
   category      String
   pricePerM2    Float
@@ -101,23 +109,23 @@ model product {
   image         String?
   pricingConfig Json?
   createdAt     DateTime    @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime    @updatedAt
   orderitem     orderitem[]
 }
 
 model systemsettings {
-  id             String   @id
+  id             String   @id @default(uuid())
   companyName    String   @default("Minha Gráfica")
   companyCnpj    String?
   companyPhone   String?
   companyEmail   String?
   companyAddress String?
   priceSettings  String?
-  updatedAt      DateTime
+  updatedAt      DateTime @updatedAt
 }
 
 model user {
-  id        String    @id
+  id        String    @id @default(uuid())
   email     String    @unique(map: "User_email_key")
   name      String
   password  String
@@ -125,7 +133,7 @@ model user {
   phone     String?
   image     String?
   createdAt DateTime  @default(now())
-  updatedAt DateTime
+  updatedAt DateTime  @updatedAt
   log       log[]
 }
 

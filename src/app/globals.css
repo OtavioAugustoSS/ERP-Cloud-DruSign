@@ -117,6 +117,26 @@ body {
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
+/* ── Animações de entrada ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in-up { animation: fadeInUp 0.45s ease both; }
+.animate-fade-in    { animation: fadeIn  0.35s ease both; }
+.animate-delay-50   { animation-delay:  50ms; }
+.animate-delay-100  { animation-delay: 100ms; }
+.animate-delay-150  { animation-delay: 150ms; }
+.animate-delay-200  { animation-delay: 200ms; }
+.animate-delay-250  { animation-delay: 250ms; }
+.animate-delay-300  { animation-delay: 300ms; }
+.animate-delay-400  { animation-delay: 400ms; }
+.animate-delay-500  { animation-delay: 500ms; }
+
 /* ── Esconde spin-buttons dos inputs numéricos ── */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

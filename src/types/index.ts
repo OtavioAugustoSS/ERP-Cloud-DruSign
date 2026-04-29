@@ -142,6 +142,15 @@ export interface Client {
     email?: string | null;
     phone?: string | null;
     document?: string | null;
+    ie?: string | null;
+    zip?: string | null;
+    street?: string | null;
+    number?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
+    notes?: string | null;
+    orderCount?: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -151,6 +160,14 @@ export interface CreateClientInput {
     email?: string;
     phone?: string;
     document?: string;
+    ie?: string;
+    zip?: string;
+    street?: string;
+    number?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    notes?: string;
 }
 
 export interface UpdateClientInput {
@@ -158,6 +175,14 @@ export interface UpdateClientInput {
     email?: string;
     phone?: string;
     document?: string;
+    ie?: string;
+    zip?: string;
+    street?: string;
+    number?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    notes?: string;
 }
 
 // ----- System Settings -----

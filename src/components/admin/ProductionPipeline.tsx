@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { OrderStatus } from '@/types';
 
 const STEPS: { status: OrderStatus; label: string }[] = [
@@ -29,7 +29,8 @@ export default function ProductionPipeline({ currentStatus = 'PENDING' }: Produc
     if (isCancelled) {
         return (
             <div className="w-full py-6 flex justify-center">
-                <span className="px-4 py-2 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                    <X size={12} strokeWidth={3} />
                     Pedido Cancelado
                 </span>
             </div>
@@ -37,35 +38,62 @@ export default function ProductionPipeline({ currentStatus = 'PENDING' }: Produc
     }
 
     return (
-        <div className="w-full py-6 flex justify-center">
-            <div className="relative flex items-center gap-12">
-                {/* Linha de fundo */}
-                <div className="absolute left-0 top-[15px] w-full h-[3px] bg-white/5 -z-10 rounded-full" />
-
+        <div className="w-full py-6 px-4">
+            <div className="flex items-start w-full">
                 {STEPS.map((step, idx) => {
                     const isCompleted = idx < currentIndex;
-                    const isCurrent  = idx === currentIndex;
+                    const isCurrent   = idx === currentIndex;
+                    const isPending   = idx > currentIndex;
+                    const isLast      = idx === STEPS.length - 1;
 
                     return (
-                        <div key={step.status} className="flex flex-col items-center gap-3 relative z-10">
-                            <div
-                                className={`
-                                    w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shadow-xl
+                        <div key={step.status} className={`flex items-start ${isLast ? '' : 'flex-1'}`}>
+                            {/* Step */}
+                            <div className="flex flex-col items-center shrink-0">
+                                {/* Dot */}
+                                <div className={`
+                                    relative w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-500
                                     ${isCompleted
-                                        ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(19,164,236,0.6)]'
+                                        ? 'bg-primary border-primary shadow-[0_0_12px_rgba(19,164,236,0.5)]'
                                         : isCurrent
-                                            ? 'bg-background-dark border-primary text-primary shadow-[0_0_20px_rgba(19,164,236,0.8)] scale-125'
-                                            : 'bg-background-dark border-white/20 text-white/20'}
-                                `}
-                            >
-                                {isCompleted
-                                    ? <Check size={14} strokeWidth={3} />
-                                    : <div className={`w-2.5 h-2.5 rounded-full ${isCurrent ? 'bg-primary shadow-[0_0_10px_#13a4ec] animate-pulse' : 'bg-white/20'}`} />
-                                }
+                                            ? 'bg-background-dark border-primary shadow-[0_0_18px_rgba(19,164,236,0.7)]'
+                                            : 'bg-white/[0.03] border-white/10'}
+                                `}>
+                                    {isCompleted ? (
+                                        <Check size={14} strokeWidth={3} className="text-white" />
+                                    ) : isCurrent ? (
+                                        <>
+                                            <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                                            {/* Anel pulsante externo */}
+                                            <span className="absolute inset-0 rounded-full border border-primary/40 animate-ping" />
+                                        </>
+                                    ) : (
+                                        <div className="w-2 h-2 rounded-full bg-white/15" />
+                                    )}
+                                </div>
+
+                                {/* Label */}
+                                <span className={`
+                                    mt-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap text-center
+                                    ${isCurrent   ? 'text-white'      : ''}
+                                    ${isCompleted ? 'text-primary'    : ''}
+                                    ${isPending   ? 'text-slate-600'  : ''}
+                                `}>
+                                    {step.label}
+                                </span>
                             </div>
-                            <span className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap ${isCurrent ? 'text-white' : isCompleted ? 'text-primary' : 'text-slate-500'}`}>
-                                {step.label}
-                            </span>
+
+                            {/* Connector line (except after last step) */}
+                            {!isLast && (
+                                <div className="flex-1 mt-[17px] mx-1.5 h-[2px] rounded-full overflow-hidden bg-white/[0.06]">
+                                    <div className={`
+                                        h-full rounded-full transition-all duration-700 ease-out
+                                        ${isCompleted
+                                            ? 'w-full bg-primary shadow-[0_0_6px_rgba(19,164,236,0.4)]'
+                                            : 'w-0'}
+                                    `} />
+                                </div>
+                            )}
                         </div>
                     );
                 })}

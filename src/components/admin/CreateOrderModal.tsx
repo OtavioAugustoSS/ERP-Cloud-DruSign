@@ -203,6 +203,13 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
         setClientName(c.name);
         setClientDocument(maskDocument(c.document ?? ''));
         setClientPhone(maskPhone(c.phone ?? ''));
+        if (c.ie)           setClientIe(c.ie);
+        if (c.zip)          setClientZip(maskCEP(c.zip));
+        if (c.street)       setClientStreet(c.street);
+        if (c.number)       setClientNumber(c.number);
+        if (c.neighborhood) setClientNeighborhood(c.neighborhood);
+        if (c.city)         setClientCity(c.city);
+        if (c.state)        setClientState(c.state);
         setClientSearch('');
         setShowSuggestions(false);
     }
@@ -411,7 +418,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-3">
                         <div className="text-right hidden lg:block">
                             <p className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Total Estimado</p>
                             <p className="text-2xl font-bold text-emerald-400 tracking-tight font-mono leading-tight">

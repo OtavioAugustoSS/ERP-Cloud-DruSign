@@ -1,7 +1,9 @@
 'use server';
 
-import db from '@/lib/db';
+import prisma from '@/lib/db';
 import { requireUser } from '@/lib/auth/session';
+
+const db = prisma;
 
 export interface DashboardStats {
     // Métricas do mês (KPIs do topo)
@@ -51,7 +53,7 @@ export async function getDashboardData(): Promise<DashboardStats> {
     const [activeOrders, completedThisMonth, ordersThisMonthData, recentOrders, totalClients, allItems] = await Promise.all([
         db.order.findMany({
             where: { status: { in: ['PENDING', 'IN_PRODUCTION', 'FINISHING', 'READY_FOR_SHIPPING'] } },
-            include: { items: true },
+            include: { orderitem: true },
             orderBy: { createdAt: 'desc' },
         }),
         // Receita: apenas pedidos COMPLETED criados este mês
@@ -72,7 +74,7 @@ export async function getDashboardData(): Promise<DashboardStats> {
         db.client.count(),
         db.order.findMany({
             select: {
-                items: {
+                orderitem: {
                     select: {
                         quantity: true,
                         material: true,
@@ -84,35 +86,38 @@ export async function getDashboardData(): Promise<DashboardStats> {
         }),
     ]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type AnyOrder = any;
+
     const byStatus = {
-        PENDING: activeOrders.filter(o => o.status === 'PENDING').length,
-        IN_PRODUCTION: activeOrders.filter(o => o.status === 'IN_PRODUCTION').length,
-        FINISHING: activeOrders.filter(o => o.status === 'FINISHING').length,
-        READY_FOR_SHIPPING: activeOrders.filter(o => o.status === 'READY_FOR_SHIPPING').length,
+        PENDING:            activeOrders.filter((o: AnyOrder) => o.status === 'PENDING').length,
+        IN_PRODUCTION:      activeOrders.filter((o: AnyOrder) => o.status === 'IN_PRODUCTION').length,
+        FINISHING:          activeOrders.filter((o: AnyOrder) => o.status === 'FINISHING').length,
+        READY_FOR_SHIPPING: activeOrders.filter((o: AnyOrder) => o.status === 'READY_FOR_SHIPPING').length,
     };
 
-    const monthRevenue = completedThisMonth.reduce((s, o) => s + o.totalPrice, 0);
+    const monthRevenue    = completedThisMonth.reduce((s: number, o: AnyOrder) => s + o.totalPrice, 0);
     const ordersThisMonth = ordersThisMonthData.length;
-    const avgTicketMonth = ordersThisMonth > 0
-        ? ordersThisMonthData.reduce((s, o) => s + o.totalPrice, 0) / ordersThisMonth
+    const avgTicketMonth  = ordersThisMonth > 0
+        ? ordersThisMonthData.reduce((s: number, o: AnyOrder) => s + o.totalPrice, 0) / ordersThisMonth
         : 0;
 
     const alertOrders = activeOrders
-        .filter(o => o.deliveryDate && new Date(o.deliveryDate) <= endOfToday)
-        .map(o => ({
-            id: o.id,
-            clientName: o.clientName,
-            deliveryDate: o.deliveryDate!.toISOString(),
-            status: o.status,
+        .filter((o: AnyOrder) => o.deliveryDate && new Date(o.deliveryDate) <= endOfToday)
+        .map((o: AnyOrder) => ({
+            id:           o.id,
+            clientName:   o.clientName,
+            deliveryDate: o.deliveryDate.toISOString(),
+            status:       o.status,
         }));
 
     const materialCounts: Record<string, number> = {};
     for (const order of allItems) {
-        for (const item of order.items) {
+        for (const item of order.orderitem) {
             const base = item.product?.name ?? item.material ?? 'Outros';
             const variant = (item.customDetails ?? '')
                 .split(' | ')
-                .map(p => p.split(': ').slice(1).join(': '))
+                .map((p: string) => p.split(': ').slice(1).join(': '))
                 .filter(Boolean)
                 .join(' · ');
             const key = variant ? `${base} ${variant}` : base;
@@ -138,12 +143,12 @@ export async function getDashboardData(): Promise<DashboardStats> {
         overdueCount: alertOrders.length,
         byStatus,
         isAdmin: session.role === 'admin',
-        recentOrders: recentOrders.map(o => ({
-            id: o.id,
-            clientName: o.clientName,
-            status: o.status,
-            totalPrice: o.totalPrice,
-            createdAt: o.createdAt.toISOString(),
+        recentOrders: recentOrders.map((o: AnyOrder) => ({
+            id:           o.id,
+            clientName:   o.clientName,
+            status:       o.status,
+            totalPrice:   o.totalPrice,
+            createdAt:    o.createdAt.toISOString(),
             deliveryDate: o.deliveryDate?.toISOString() ?? null,
         })),
         topMaterials,

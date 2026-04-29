@@ -8,10 +8,10 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
     await requireUser();
     try {
         // findFirst + graceful fallback avoids race on first create
-        let settings = await prisma.systemSettings.findFirst();
+        let settings = await prisma.systemsettings.findFirst();
         if (!settings) {
             try {
-                settings = await prisma.systemSettings.create({
+                settings = await prisma.systemsettings.create({
                     data: {
                         companyName: 'Minha Gráfica',
                         companyAddress: '',
@@ -22,7 +22,7 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
                 });
             } catch {
                 // Concurrent request already created it
-                settings = await prisma.systemSettings.findFirst();
+                settings = await prisma.systemsettings.findFirst();
             }
         }
         if (!settings) throw new Error('Could not load settings');
@@ -45,9 +45,9 @@ export const getSystemSettings = async (): Promise<SystemSettings> => {
 export const updateSystemSettings = async (data: Partial<SystemSettings>): Promise<{ success: boolean; error?: string }> => {
     await requireAdmin();
     try {
-        const current = await prisma.systemSettings.findFirst();
+        const current = await prisma.systemsettings.findFirst();
         if (current) {
-            await prisma.systemSettings.update({
+            await prisma.systemsettings.update({
                 where: { id: current.id },
                 data: {
                     companyName: data.companyName,
@@ -58,7 +58,7 @@ export const updateSystemSettings = async (data: Partial<SystemSettings>): Promi
                 },
             });
         } else {
-            await prisma.systemSettings.create({
+            await prisma.systemsettings.create({
                 data: {
                     companyName: data.companyName || 'Minha Gráfica',
                     companyCnpj: data.companyCnpj,
