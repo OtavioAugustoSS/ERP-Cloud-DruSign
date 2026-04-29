@@ -2,15 +2,18 @@
 
 import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { SignJWT } from 'jose'
-import { getJwtSecret, getSession } from '@/lib/auth/session'
+import { getJwtSecret, getSession, getSessionTtlSeconds } from '@/lib/auth/session'
+import { audit } from '@/lib/auth/audit'
 import type { SessionUser, User, UserRole } from '@/types/auth'
 
-// In-memory rate limiter: max 5 attempts per email per 15 min
+// Rate limiter in-memory.
+// Chave dupla (email + IP) para impedir tanto enumeração de senha quanto botnet.
+// Em produção com múltiplas instâncias, migrar para Redis/Upstash.
 const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000;
+const MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS) || 5;
+const WINDOW_MS = (Number(process.env.LOGIN_WINDOW_MINUTES) || 15) * 60 * 1000;
 
 function checkRateLimit(key: string): boolean {
     const now = Date.now();
@@ -24,26 +27,45 @@ function checkRateLimit(key: string): boolean {
     return true;
 }
 
+async function getClientIp(): Promise<string> {
+    const h = await headers();
+    // Ordem comum em proxies reversos (Caddy, nginx, Cloudflare)
+    const forwarded = h.get('x-forwarded-for');
+    if (forwarded) return forwarded.split(',')[0].trim();
+    return h.get('x-real-ip') || h.get('cf-connecting-ip') || 'unknown';
+}
+
 export async function login(email: string, password: string): Promise<{ user: User } | { error: string }> {
     if (!email || !password) {
         return { error: 'Email e senha são obrigatórios' }
     }
 
-    const key = email.toLowerCase().trim();
-    if (!checkRateLimit(key)) {
-        return { error: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.' }
+    const emailKey = `email:${email.toLowerCase().trim()}`;
+    const ipKey = `ip:${await getClientIp()}`;
+    if (!checkRateLimit(emailKey) || !checkRateLimit(ipKey)) {
+        const minutes = Number(process.env.LOGIN_WINDOW_MINUTES) || 15;
+        return { error: `Muitas tentativas. Aguarde ${minutes} minutos e tente novamente.` }
     }
 
     try {
         const user = await prisma.user.findUnique({ where: { email } })
-        if (!user) return { error: 'Credenciais inválidas' }
+        if (!user) {
+            await audit({ action: 'LOGIN_FAILURE', details: { email, reason: 'user_not_found' } });
+            return { error: 'Credenciais inválidas' }
+        }
 
         const isValid = await bcrypt.compare(password, user.password)
-        if (!isValid) return { error: 'Credenciais inválidas' }
+        if (!isValid) {
+            await audit({ action: 'LOGIN_FAILURE', userId: user.id, details: { email, reason: 'wrong_password' } });
+            return { error: 'Credenciais inválidas' }
+        }
 
         // Clear attempts on success
-        loginAttempts.delete(key);
+        loginAttempts.delete(emailKey);
+        loginAttempts.delete(ipKey);
+        await audit({ action: 'LOGIN_SUCCESS', userId: user.id });
 
+        const ttlSeconds = getSessionTtlSeconds();
         const token = await new SignJWT({
             id: user.id,
             email: user.email,
@@ -51,14 +73,14 @@ export async function login(email: string, password: string): Promise<{ user: Us
         })
             .setProtectedHeader({ alg: 'HS256' })
             .setIssuedAt()
-            .setExpirationTime('24h')
+            .setExpirationTime(`${ttlSeconds}s`)
             .sign(getJwtSecret())
 
         ;(await cookies()).set('session', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 24,
+            maxAge: ttlSeconds,
             path: '/',
         })
 
@@ -79,6 +101,7 @@ export async function login(email: string, password: string): Promise<{ user: Us
 }
 
 export async function logout(): Promise<{ success: true }> {
+    await audit({ action: 'LOGOUT' });
     ;(await cookies()).delete('session')
     return { success: true }
 }

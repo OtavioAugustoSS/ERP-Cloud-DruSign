@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { Icons } from './Icons';
 import { registerUser, deleteUser, updateUser } from '../../actions/user';
 import { maskPhone } from '../../lib/utils/masks';
+import { PASSWORD_RULES_TEXT } from '../../lib/auth/password';
 import { useRouter } from 'next/navigation';
 import { Users, ShieldCheck, UserCheck } from 'lucide-react';
 
@@ -402,6 +403,9 @@ export default function UserList({ initialUsers }: UserListProps) {
                                     placeholder={editingUser ? 'Deixe em branco para manter' : '••••••'}
                                     className="w-full bg-black/40 border border-white/10 rounded-lg h-10 px-3 text-white text-sm outline-none focus:border-primary transition-colors placeholder:text-slate-600"
                                 />
+                                <p className="text-[11px] text-slate-500 leading-snug pt-0.5">
+                                    {PASSWORD_RULES_TEXT}
+                                </p>
                             </div>
 
                             <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">

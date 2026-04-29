@@ -91,7 +91,7 @@ export default function History() {
             <header className="flex-none px-8 py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
 
                 {/* Linha 1 — Título + NotificationBell */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 animate-fade-in-up">
                     <div>
                         <h2 className="text-white text-2xl font-bold leading-tight tracking-tight">Histórico de Pedidos</h2>
                         <p className="text-slate-500 text-xs mt-0.5">Pedidos finalizados e cancelados do sistema.</p>
@@ -99,7 +99,7 @@ export default function History() {
                 </div>
 
                 {/* Linha 2 — Badges de estatísticas */}
-                <div className="flex items-center gap-2 mt-4 flex-wrap">
+                <div className="flex items-center gap-2 mt-4 flex-wrap animate-fade-in-up animate-delay-100">
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/5 border border-green-500/10 text-[11px] text-green-400 font-medium">
                         <CheckCircle2 size={11} />
                         {stats.completed} Concluído{stats.completed !== 1 ? 's' : ''}
@@ -115,7 +115,7 @@ export default function History() {
                 </div>
 
                 {/* ── FILTROS ── */}
-                <div className="mt-4 flex flex-col xl:flex-row gap-3">
+                <div className="mt-4 flex flex-col xl:flex-row gap-3 animate-fade-in-up animate-delay-150">
 
                     {/* Busca */}
                     <div className="flex-1 min-w-[280px]">
@@ -172,7 +172,7 @@ export default function History() {
 
             {/* ── TABELA ── */}
             <div className="flex-1 overflow-auto p-6 pt-4">
-                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl">
+                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl animate-fade-in-up animate-delay-200">
                     {loading ? (
                         <div className="p-12 flex justify-center">
                             <GlobalLoader text="CARREGANDO HISTÓRICO..." />
@@ -302,7 +302,7 @@ export default function History() {
 
                 {/* Rodapé — contagem + receita filtrada */}
                 {!loading && filteredOrders.length > 0 && (
-                    <div className="flex items-center justify-between mt-3 px-1">
+                    <div className="flex items-center justify-between mt-3 px-1 animate-fade-in-up animate-delay-250">
                         <p className="text-[11px] text-slate-600 font-mono">
                             {filteredOrders.length === orders.length
                                 ? `${orders.length} registro${orders.length !== 1 ? 's' : ''} no total`

@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/db';
 import { requireUser, requireAdmin } from '@/lib/auth/session';
+import { audit } from '@/lib/auth/audit';
 import type { Client, CreateClientInput, UpdateClientInput } from '@/types';
 
 // Tipo interno que inclui campos novos + _count (Prisma ainda não os tipou — remover após prisma generate)
@@ -70,6 +71,7 @@ export async function createClient(
                 updatedAt:    new Date(),
             },
         });
+        await audit({ action: 'CLIENT_CREATED', targetId: row.id, details: { name: row.name } });
         return { success: true, client: toClient(row) };
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '';
@@ -104,6 +106,11 @@ export async function updateClient(
                 updatedAt: new Date(),
             },
         });
+        await audit({
+            action: 'CLIENT_UPDATED',
+            targetId: id,
+            details: { fields: Object.keys(input) },
+        });
         return { success: true };
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '';
@@ -120,6 +127,7 @@ export async function deleteClient(
     await requireAdmin();
     try {
         await prisma.client.delete({ where: { id } });
+        await audit({ action: 'CLIENT_DELETED', targetId: id });
         return { success: true };
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '';

@@ -110,7 +110,7 @@ export default function AdminSidebar() {
 
                 {/* ── Usuário + logout ── */}
                 <div className="py-3 px-3 border-t border-white/5 flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center gap-3 px-2 py-1.5">
+                    <div className="flex items-center gap-3 pl-[2px] pr-2 py-1.5">
                         <div
                             title={user.name}
                             className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0 select-none"

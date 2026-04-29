@@ -28,6 +28,20 @@ export function getJwtSecret(): Uint8Array {
     return new TextEncoder().encode(secret);
 }
 
+const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24; // 24h
+const MIN_SESSION_TTL_SECONDS = 60 * 15;          // 15min — abaixo disso é UX ruim
+const MAX_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 dias — acima disso vira risco
+
+export function getSessionTtlSeconds(): number {
+    const raw = process.env.JWT_EXPIRES_IN_SECONDS;
+    if (!raw) return DEFAULT_SESSION_TTL_SECONDS;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < MIN_SESSION_TTL_SECONDS || n > MAX_SESSION_TTL_SECONDS) {
+        return DEFAULT_SESSION_TTL_SECONDS;
+    }
+    return Math.floor(n);
+}
+
 export async function getSession(): Promise<SessionUser | null> {
     const token = (await cookies()).get('session')?.value;
     if (!token) return null;

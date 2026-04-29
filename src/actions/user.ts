@@ -4,6 +4,8 @@ import prisma from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth/session'
+import { validatePassword } from '@/lib/auth/password'
+import { audit } from '@/lib/auth/audit'
 import { RegisterUserInput, UpdateUserInput } from '@/types'
 
 export async function registerUser(data: RegisterUserInput) {
@@ -15,6 +17,9 @@ export async function registerUser(data: RegisterUserInput) {
             return { error: "Preencha todos os campos obrigatórios." };
         }
 
+        const pwCheck = validatePassword(password);
+        if (!pwCheck.ok) return { error: pwCheck.error };
+
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return { error: "Email já cadastrado." };
@@ -22,10 +27,11 @@ export async function registerUser(data: RegisterUserInput) {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await prisma.user.create({
+        const created = await prisma.user.create({
             data: { name, email, password: hashedPassword, role, phone, image }
         });
 
+        await audit({ action: 'USER_CREATED', targetId: created.id, details: { email, role } });
         revalidatePath('/admin/users');
         return { success: "Usuário criado com sucesso!" };
     } catch (error) {
@@ -79,12 +85,23 @@ export async function updateUser(id: string, data: UpdateUserInput) {
             password?: string;
         } = { name, email, role, phone, image };
 
-        if (password && password.trim() !== '') {
-            updateData.password = await bcrypt.hash(password, 10);
+        const passwordChanged = !!(password && password.trim() !== '');
+        if (passwordChanged) {
+            const pwCheck = validatePassword(password!);
+            if (!pwCheck.ok) return { error: pwCheck.error };
+            updateData.password = await bcrypt.hash(password!, 10);
         }
 
         await prisma.user.update({ where: { id }, data: updateData });
 
+        await audit({
+            action: passwordChanged ? 'PASSWORD_CHANGED' : 'USER_UPDATED',
+            targetId: id,
+            details: {
+                fields: Object.keys(updateData).filter(k => k !== 'password'),
+                passwordChanged,
+            },
+        });
         revalidatePath('/admin/users');
         return { success: "Usuário atualizado!" };
     } catch (error) {
@@ -97,6 +114,7 @@ export async function deleteUser(id: string) {
     await requireAdmin();
     try {
         await prisma.user.delete({ where: { id } });
+        await audit({ action: 'USER_DELETED', targetId: id });
         revalidatePath('/admin/users');
         return { success: "Usuário removido." };
     } catch (error) {

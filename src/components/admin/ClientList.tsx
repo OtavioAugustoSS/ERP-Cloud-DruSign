@@ -192,7 +192,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
             <header className="flex-none px-8 py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
 
                 {/* Linha 1 */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 animate-fade-in-up">
                     <div>
                         <h2 className="text-white text-2xl font-bold leading-tight tracking-tight">Clientes</h2>
                         <p className="text-slate-500 text-xs mt-0.5">Cadastro de clientes e suas informações.</p>
@@ -210,7 +210,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
                 </div>
 
                 {/* Linha 2 — Stats */}
-                <div className="flex items-center gap-2 mt-4 flex-wrap">
+                <div className="flex items-center gap-2 mt-4 flex-wrap animate-fade-in-up animate-delay-100">
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 text-[11px] text-primary font-medium">
                         <UserRound size={11} />
                         {stats.total} cadastrado{stats.total !== 1 ? 's' : ''}
@@ -222,7 +222,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
                 </div>
 
                 {/* Linha 3 — Busca */}
-                <div className="mt-4">
+                <div className="mt-4 animate-fade-in-up animate-delay-150">
                     <div className="flex w-full items-center rounded-full h-11 bg-white/5 border border-white/10 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all overflow-hidden">
                         <div className="pl-4 text-slate-500"><Icons.Search size={18} /></div>
                         <input
@@ -242,7 +242,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
 
             {/* ── TABELA ── */}
             <div className="flex-1 overflow-auto p-6 pt-4">
-                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl">
+                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl animate-fade-in-up animate-delay-200">
                     {filtered.length === 0 ? (
                         <div className="py-16 flex flex-col items-center gap-3 text-slate-500">
                             <UserRound size={32} className="opacity-30" />
@@ -386,7 +386,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
 
                 {/* Rodapé */}
                 {filtered.length > 0 && (
-                    <p className="text-[11px] text-slate-600 mt-3 px-1 font-mono">
+                    <p className="text-[11px] text-slate-600 mt-3 px-1 font-mono animate-fade-in-up animate-delay-250">
                         {filtered.length === clients.length
                             ? `${clients.length} cliente${clients.length !== 1 ? 's' : ''} no total`
                             : `${filtered.length} de ${clients.length} cliente${clients.length !== 1 ? 's' : ''} exibido${filtered.length !== 1 ? 's' : ''}`

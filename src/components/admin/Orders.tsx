@@ -69,7 +69,7 @@ export default function Orders() {
             <header className="flex-none px-8 py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
 
                 {/* Linha 1 — Título + ações */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 animate-fade-in-up">
                     <div>
                         <h2 className="text-white text-2xl font-bold leading-tight tracking-tight">Fila de Produção</h2>
                         <p className="text-slate-500 text-xs mt-0.5">Acompanhe e gerencie o fluxo de pedidos ativos.</p>
@@ -89,7 +89,7 @@ export default function Orders() {
                 </div>
 
                 {/* Linha 2 — Badges de contagem */}
-                <div className="flex items-center gap-2 mt-4 flex-wrap">
+                <div className="flex items-center gap-2 mt-4 flex-wrap animate-fade-in-up animate-delay-100">
                     {isAdmin && (
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-500/5 border border-yellow-500/10 text-[11px] text-yellow-500 font-medium">
                             <span className="size-1.5 rounded-full bg-yellow-500 animate-pulse" />
@@ -111,7 +111,7 @@ export default function Orders() {
                 </div>
 
                 {/* ── FILTROS ── */}
-                <div className="mt-6 flex flex-col xl:flex-row gap-3">
+                <div className="mt-6 flex flex-col xl:flex-row gap-3 animate-fade-in-up animate-delay-150">
 
                     {/* Busca */}
                     <div className="flex-1 min-w-[280px]">
@@ -170,7 +170,7 @@ export default function Orders() {
 
             {/* ── TABELA ── */}
             <div className="flex-1 overflow-auto p-6 pt-4">
-                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl">
+                <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl animate-fade-in-up animate-delay-200">
                     {loading ? (
                         <div className="p-12 flex justify-center">
                             <GlobalLoader text="CARREGANDO PEDIDOS..." />
@@ -218,7 +218,7 @@ export default function Orders() {
 
                 {/* Rodapé de contagem + total */}
                 {!loading && filteredOrders.length > 0 && (
-                    <div className="flex items-center justify-between mt-3 px-1">
+                    <div className="flex items-center justify-between mt-3 px-1 animate-fade-in-up animate-delay-250">
                         <p className="text-[11px] text-slate-600 font-mono">
                             {filteredOrders.length === orders.length
                                 ? `${orders.length} pedido${orders.length !== 1 ? 's' : ''} no total`

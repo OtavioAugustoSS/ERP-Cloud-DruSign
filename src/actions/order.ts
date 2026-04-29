@@ -3,6 +3,7 @@
 import prisma from '@/lib/db';
 import { Order, OrderInput, OrderStatus } from '@/types';
 import { requireUser, requireAdmin } from '@/lib/auth/session';
+import { audit } from '@/lib/auth/audit';
 
 const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
@@ -102,6 +103,16 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
                 },
             },
             include: INCLUDE_ITEMS,
+        });
+
+        await audit({
+            action: 'ORDER_CREATED',
+            targetId: newOrder.id,
+            details: {
+                totalPrice: newOrder.totalPrice,
+                clientName: newOrder.clientName,
+                itemCount: newOrder.orderitem.length,
+            },
         });
 
         const row = newOrder.orderitem;
@@ -239,9 +250,16 @@ import { createNotification } from './notification';
 export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<{ success: boolean }> => {
     await requireUser();
     try {
+        const previous = await prisma.order.findUnique({ where: { id }, select: { status: true } });
         const order = await prisma.order.update({
             where: { id },
             data: { status },
+        });
+
+        await audit({
+            action: status === 'CANCELLED' ? 'ORDER_CANCELLED' : 'ORDER_STATUS_CHANGED',
+            targetId: id,
+            details: { from: previous?.status, to: status },
         });
 
         const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -283,6 +301,7 @@ export const updateOrderDetails = async (id: string, data: Partial<OrderInput>):
                 },
             },
         });
+        await audit({ action: 'ORDER_UPDATED', targetId: id, details: { fields: Object.keys(data) } });
         return { success: true };
     } catch (error) {
         console.error('updateOrderDetails error:', error);
