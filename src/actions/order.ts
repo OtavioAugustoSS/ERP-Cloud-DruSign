@@ -63,6 +63,7 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
 
         const newOrder = await prisma.order.create({
             data: {
+                clientId:           orderData.clientId || null,
                 clientName:         orderData.clientName,
                 clientDocument:     orderData.clientDocument,
                 clientIe:           orderData.clientIe,

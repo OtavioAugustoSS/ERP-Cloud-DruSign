@@ -20,12 +20,13 @@ type ToastState = { type: 'success' | 'error'; message: string } | null;
 interface FormState {
     name: string; email: string; phone: string; document: string; ie: string;
     zip: string; street: string; number: string; neighborhood: string; city: string; state: string;
-    notes: string;
+    nickname: string; contact: string; phone2: string; notes: string;
 }
 
 const emptyForm: FormState = {
     name: '', email: '', phone: '', document: '', ie: '',
-    zip: '', street: '', number: '', neighborhood: '', city: '', state: '', notes: '',
+    zip: '', street: '', number: '', neighborhood: '', city: '', state: '',
+    nickname: '', contact: '', phone2: '', notes: '',
 };
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
@@ -72,6 +73,8 @@ export default function ClientList({ initialClients }: ClientListProps) {
     const [isPending, startTransition]    = useTransition();
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
     const [toast, setToast] = useState<ToastState>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const showToast = useCallback((type: 'success' | 'error', message: string) => {
         setToast({ type, message });
@@ -85,6 +88,12 @@ export default function ClientList({ initialClients }: ClientListProps) {
         c.email?.toLowerCase().includes(search.toLowerCase()) ||
         c.city?.toLowerCase().includes(search.toLowerCase())
     ), [clients, search]);
+
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const paginatedClients = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filtered.slice(start, start + itemsPerPage);
+    }, [filtered, currentPage]);
 
     // Estatísticas
     const stats = useMemo(() => ({
@@ -132,6 +141,9 @@ export default function ClientList({ initialClients }: ClientListProps) {
             neighborhood: c.neighborhood ?? '',
             city:         c.city         ?? '',
             state:        c.state        ?? '',
+            nickname:     c.nickname     ?? '',
+            contact:      c.contact      ?? '',
+            phone2:       maskPhone(c.phone2 ?? ''),
             notes:        c.notes        ?? '',
         });
         setError(''); setModalOpen(true);
@@ -221,22 +233,120 @@ export default function ClientList({ initialClients }: ClientListProps) {
                     </div>
                 </div>
 
-                {/* Linha 3 — Busca */}
-                <div className="mt-4 animate-fade-in-up animate-delay-150">
+                {/* Linha 3 — Busca e Paginação */}
+                <div className="mt-4 flex flex-col gap-3 animate-fade-in-up animate-delay-150">
                     <div className="flex w-full items-center rounded-full h-11 bg-white/5 border border-white/10 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all overflow-hidden">
                         <div className="pl-4 text-slate-500"><Icons.Search size={18} /></div>
                         <input
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
+                            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                             className="w-full bg-transparent border-none text-white placeholder-slate-600 px-3 focus:ring-0 h-full text-sm outline-none"
                             placeholder="Buscar por nome, documento, telefone, e-mail ou cidade..."
                         />
                         {search && (
-                            <button onClick={() => setSearch('')} className="pr-4 text-slate-500 hover:text-white transition-colors">
+                            <button onClick={() => { setSearch(''); setCurrentPage(1); }} className="pr-4 text-slate-500 hover:text-white transition-colors">
                                 <X size={16} />
                             </button>
                         )}
                     </div>
+
+                    {/* Paginação no topo */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                            {/* Botões Primeira / Anterior */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                    title="Primeira página"
+                                >
+                                    «
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                >
+                                    Anterior
+                                </button>
+                            </div>
+
+                            {/* Números */}
+                            <div className="flex items-center gap-1 hidden sm:flex">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum = currentPage;
+                                    if (totalPages <= 5) pageNum = i + 1;
+                                    else if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`h-7 w-7 rounded-lg text-xs font-mono transition-colors flex items-center justify-center ${
+                                                currentPage === pageNum
+                                                    ? 'bg-primary/20 text-primary border border-primary/30'
+                                                    : 'hover:bg-white/10 text-slate-400'
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Botões Próxima / Última */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                >
+                                    Próxima
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                                    title="Última página"
+                                >
+                                    »
+                                </button>
+                            </div>
+
+                            {/* Ir para página específica */}
+                            <div className="flex items-center gap-2 ml-2 pl-3 border-l border-white/10 hidden md:flex">
+                                <span className="text-[11px] text-slate-500">Página:</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={totalPages}
+                                    defaultValue={currentPage}
+                                    key={currentPage} // Força resetar o valor ao trocar de página por botão
+                                    onBlur={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (!isNaN(val) && val >= 1 && val <= totalPages) setCurrentPage(val);
+                                        else e.target.value = currentPage.toString();
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const val = parseInt(e.currentTarget.value);
+                                            if (!isNaN(val) && val >= 1 && val <= totalPages) setCurrentPage(val);
+                                            else e.currentTarget.value = currentPage.toString();
+                                        }
+                                    }}
+                                    className="w-12 h-7 bg-white/5 border border-white/10 rounded-lg text-xs text-center text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none tabular-nums"
+                                />
+                                <span className="text-[11px] text-slate-500">/ {totalPages}</span>
+                            </div>
+                            
+                            <div className="sm:hidden text-xs text-slate-500 font-mono px-2">
+                                {currentPage} / {totalPages}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -248,7 +358,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
                             <UserRound size={32} className="opacity-30" />
                             <p className="text-sm">{search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}</p>
                             {search && (
-                                <button onClick={() => setSearch('')} className="text-xs text-primary/70 hover:text-primary transition-colors underline underline-offset-2">
+                                <button onClick={() => { setSearch(''); setCurrentPage(1); }} className="text-xs text-primary/70 hover:text-primary transition-colors underline underline-offset-2">
                                     Limpar busca
                                 </button>
                             )}
@@ -266,7 +376,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/[0.04] text-sm">
-                                {filtered.map(c => {
+                                {paginatedClients.map(c => {
                                     const hasOrders = (c.orderCount ?? 0) > 0;
                                     const location = [c.city, c.state].filter(Boolean).join(' · ');
                                     return (
@@ -384,14 +494,16 @@ export default function ClientList({ initialClients }: ClientListProps) {
                     )}
                 </div>
 
-                {/* Rodapé */}
+                {/* Rodapé e Paginação */}
                 {filtered.length > 0 && (
-                    <p className="text-[11px] text-slate-600 mt-3 px-1 font-mono animate-fade-in-up animate-delay-250">
-                        {filtered.length === clients.length
-                            ? `${clients.length} cliente${clients.length !== 1 ? 's' : ''} no total`
-                            : `${filtered.length} de ${clients.length} cliente${clients.length !== 1 ? 's' : ''} exibido${filtered.length !== 1 ? 's' : ''}`
-                        }
-                    </p>
+                    <div className="mt-3 px-1 animate-fade-in-up animate-delay-250">
+                        <p className="text-[11px] text-slate-600 font-mono">
+                            {filtered.length === clients.length
+                                ? `${clients.length} cliente${clients.length !== 1 ? 's' : ''} no total`
+                                : `${filtered.length} de ${clients.length} cliente${clients.length !== 1 ? 's' : ''} encontrado${filtered.length !== 1 ? 's' : ''}`
+                            }
+                        </p>
+                    </div>
                 )}
             </div>
 
@@ -437,17 +549,28 @@ export default function ClientList({ initialClients }: ClientListProps) {
                                             <input autoFocus value={form.name} onChange={e => set('name')(e.target.value)} placeholder="Nome do cliente ou empresa" className={inputCls} />
                                         </Field>
                                     </div>
+                                    <div className="col-span-2">
+                                        <Field label="Nome Fantasia">
+                                            <input value={form.nickname} onChange={e => set('nickname')(e.target.value)} placeholder="Como a empresa é conhecida" className={inputCls} />
+                                        </Field>
+                                    </div>
                                     <Field label="CPF / CNPJ">
                                         <input value={form.document} onChange={e => set('document')(maskDocument(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" className={inputCls} />
                                     </Field>
                                     <Field label="Inscrição Estadual">
                                         <input value={form.ie} onChange={e => set('ie')(e.target.value)} placeholder="IE (se aplicável)" className={inputCls} />
                                     </Field>
-                                    <Field label="Telefone / WhatsApp">
-                                        <input value={form.phone} onChange={e => set('phone')(maskPhone(e.target.value))} placeholder="(00) 00000-0000" inputMode="tel" className={inputCls} />
+                                    <Field label="Pessoa de Contato">
+                                        <input value={form.contact} onChange={e => set('contact')(e.target.value)} placeholder="Ex: Reginaldo, João..." className={inputCls} />
                                     </Field>
                                     <Field label="E-mail">
                                         <input type="email" value={form.email} onChange={e => set('email')(e.target.value)} placeholder="cliente@email.com" className={inputCls} />
+                                    </Field>
+                                    <Field label="Telefone / Fixo">
+                                        <input value={form.phone} onChange={e => set('phone')(maskPhone(e.target.value))} placeholder="(00) 0000-0000" inputMode="tel" className={inputCls} />
+                                    </Field>
+                                    <Field label="Celular / WhatsApp">
+                                        <input value={form.phone2} onChange={e => set('phone2')(maskPhone(e.target.value))} placeholder="(00) 00000-0000" inputMode="tel" className={inputCls} />
                                     </Field>
                                 </div>
                             </div>

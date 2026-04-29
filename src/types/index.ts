@@ -104,6 +104,7 @@ export interface Order {
 }
 
 export interface OrderInput {
+    clientId?: string;
     clientName?: string;
     clientDocument?: string;
     clientIe?: string;
@@ -149,6 +150,9 @@ export interface Client {
     neighborhood?: string | null;
     city?: string | null;
     state?: string | null;
+    nickname?: string | null;
+    contact?: string | null;
+    phone2?: string | null;
     notes?: string | null;
     orderCount?: number;
     createdAt: Date;
@@ -167,6 +171,9 @@ export interface CreateClientInput {
     neighborhood?: string;
     city?: string;
     state?: string;
+    nickname?: string;
+    contact?: string;
+    phone2?: string;
     notes?: string;
 }
 
@@ -182,6 +189,9 @@ export interface UpdateClientInput {
     neighborhood?: string;
     city?: string;
     state?: string;
+    nickname?: string;
+    contact?: string;
+    phone2?: string;
     notes?: string;
 }
 

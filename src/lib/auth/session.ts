@@ -51,7 +51,8 @@ export async function getSession(): Promise<SessionUser | null> {
         if (typeof payload.id !== 'string' || typeof payload.email !== 'string') return null;
         const role = payload.role;
         if (role !== 'admin' && role !== 'employee') return null;
-        return { id: payload.id, email: payload.email, role: role as UserRole };
+        const name = typeof payload.name === 'string' ? payload.name : '';
+        return { id: payload.id, name, email: payload.email, role: role as UserRole };
     } catch {
         return null;
     }

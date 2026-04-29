@@ -14,6 +14,7 @@ import {
     UserRound,
     Lock,
     Unlock,
+    Factory,
     type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -87,18 +88,21 @@ export default function AdminSidebar() {
 
                 {/* ── Nav ── */}
                 <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 flex flex-col gap-1 px-3">
-                    <NavItem href="/admin"           icon={LayoutDashboard} label="Dashboard"      active={pathname === '/admin'}                                             labelCls={labelCls} />
-                    <NavItem href="/admin/orcamento" icon={ClipboardList}   label="Orçamento | OS" active={pathname === '/admin/orcamento'}                                   labelCls={labelCls} />
-                    <NavItem href="/admin/orders"    icon={ShoppingCart}    label="Pedidos"         active={!isFromHistory && (pathname === '/admin/orders' || isInOrderDetail)} labelCls={labelCls} />
-                    {isAdmin && (
-                        <NavItem href="/admin/history" icon={History} label="Histórico" active={pathname === '/admin/history' || isFromHistory} labelCls={labelCls} />
-                    )}
-                    <NavItem href="/admin/clients" icon={UserRound} label="Clientes" active={pathname === '/admin/clients'} labelCls={labelCls} />
-                    {isAdmin && (
+                    {isAdmin ? (
                         <>
+                            <NavItem href="/admin"           icon={LayoutDashboard} label="Dashboard"      active={pathname === '/admin'}                                             labelCls={labelCls} />
+                            <NavItem href="/admin/orcamento" icon={ClipboardList}   label="Orçamento | OS" active={pathname === '/admin/orcamento'}                                   labelCls={labelCls} />
+                            <NavItem href="/admin/orders"    icon={ShoppingCart}    label="Pedidos"         active={!isFromHistory && (pathname === '/admin/orders' || isInOrderDetail)} labelCls={labelCls} />
+                            <NavItem href="/admin/history"   icon={History}         label="Histórico"       active={pathname === '/admin/history' || isFromHistory}                    labelCls={labelCls} />
+                            <NavItem href="/admin/clients"   icon={UserRound}       label="Clientes"        active={pathname === '/admin/clients'}                                     labelCls={labelCls} />
                             <div className="mx-1 h-px bg-white/5 my-2" />
                             <NavItem href="/admin/settings" icon={Settings} label="Configurações" active={pathname === '/admin/settings'} labelCls={labelCls} />
                             <NavItem href="/admin/users"    icon={Users}    label="Usuários"       active={pathname === '/admin/users'}    labelCls={labelCls} />
+                        </>
+                    ) : (
+                        <>
+                            <NavItem href="/admin/producao" icon={Factory}     label="Produção" active={pathname === '/admin/producao'} labelCls={labelCls} />
+                            <NavItem href="/admin/orders"   icon={ShoppingCart} label="Pedidos"  active={!isFromHistory && (pathname === '/admin/orders' || isInOrderDetail)} labelCls={labelCls} />
                         </>
                     )}
                 </nav>

@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
-    Loader2, Search, UserRound, Plus, Minus, Trash2, FileText, Check,
+    Loader2, Search, Plus, Minus, Trash2, FileText, Check,
     X, Ruler, Sparkles, Truck, Wrench, Calendar, AlertCircle,
+    UserPlus, ChevronRight, RefreshCw,
 } from 'lucide-react';
 import { submitOrder } from '@/actions/order';
+import { createClient } from '@/actions/client';
 import { formatCurrency } from '@/lib/utils/price';
 import { maskCEP, maskDocument, maskPhone } from '@/lib/utils/masks';
 import { fetchAddressByCEP } from '@/lib/utils/viaCEP';
@@ -36,6 +38,28 @@ interface OrderItemRow {
     fileUrl?: string;
 }
 
+interface NewClientForm {
+    name: string;
+    nickname: string;
+    document: string;
+    ie: string;
+    phone: string;
+    phone2: string;
+    contact: string;
+    email: string;
+    zip: string;
+    street: string;
+    number: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+}
+
+const EMPTY_NEW_CLIENT: NewClientForm = {
+    name: '', nickname: '', document: '', ie: '', phone: '', phone2: '', contact: '', email: '',
+    zip: '', street: '', number: '', neighborhood: '', city: '', state: '',
+};
+
 const FINISHING_BY_CATEGORY: Record<string, string[]> = {
     'LONA':     ['Sem acabamento', 'Bainha + Ilhós', 'Bainha simples', 'Ilhós', 'Madeira (vara)', 'Solda'],
     'ACM':      ['Sem acabamento', 'Refile', 'Aplicação'],
@@ -53,11 +77,22 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
     const [submitError, setSubmitError] = useState('');
     const [itemError, setItemError] = useState('');
 
-    // ───── Cliente ─────
+    // ───── Cliente — modo ─────
+    const [clientMode, setClientMode] = useState<'search' | 'filled'>('search');
+    const [showNewClientForm, setShowNewClientForm] = useState(false);
+    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+    const [newClientData, setNewClientData] = useState<NewClientForm>(EMPTY_NEW_CLIENT);
+    const [isSavingClient, setIsSavingClient] = useState(false);
+    const [newClientError, setNewClientError] = useState('');
+
+    // ───── Cliente — dados ─────
     const [clientName, setClientName] = useState('');
+    const [clientNickname, setClientNickname] = useState('');
+    const [clientContact, setClientContact] = useState('');
     const [clientDocument, setClientDocument] = useState('');
     const [clientIe, setClientIe] = useState('');
     const [clientPhone, setClientPhone] = useState('');
+    const [clientPhone2, setClientPhone2] = useState('');
     const [clientZip, setClientZip] = useState('');
     const [clientStreet, setClientStreet] = useState('');
     const [clientNumber, setClientNumber] = useState('');
@@ -97,6 +132,48 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
 
     const widthInputRef = useRef<HTMLInputElement>(null);
 
+    // ───── Detecção de duplicatas no cadastro de novo cliente ─────
+    const duplicateWarning = useMemo(() => {
+        if (!showNewClientForm) return null;
+
+        // 1. Telefone (celular ou fixo, número completo >= 10 dígitos)
+        const p1 = newClientData.phone.replace(/\D/g, '');
+        const p2 = newClientData.phone2.replace(/\D/g, '');
+        for (const phoneDigits of [p2, p1]) {
+            if (phoneDigits.length >= 10) {
+                const match = clients.find(c => {
+                    const cp  = c.phone?.replace(/\D/g, '') ?? '';
+                    const cp2 = c.phone2?.replace(/\D/g, '') ?? '';
+                    return (cp && cp === phoneDigits) || (cp2 && cp2 === phoneDigits);
+                });
+                if (match) return { type: 'phone' as const, client: match };
+            }
+        }
+
+        // 2. Documento — CPF completo (11 dígitos) ou CNPJ completo (14 dígitos)
+        const docDigits = newClientData.document.replace(/\D/g, '');
+        if (docDigits.length === 11 || docDigits.length === 14) {
+            const match = clients.find(c => c.document?.replace(/\D/g, '') === docDigits);
+            if (match) return { type: 'document' as const, client: match };
+        }
+
+        // 3. Nome — só com 10+ caracteres e pelo menos uma palavra inteira (3+ chars) em comum
+        const nameTrimmed = newClientData.name.trim().toLowerCase();
+        if (nameTrimmed.length >= 10) {
+            const words = nameTrimmed.split(/\s+/).filter(w => w.length >= 3);
+            if (words.length > 0) {
+                const match = clients.find(c => {
+                    const cn = c.name.toLowerCase();
+                    const hasWordMatch = words.some(w => cn.includes(w));
+                    return hasWordMatch && (cn.includes(nameTrimmed) || nameTrimmed.includes(cn));
+                });
+                if (match) return { type: 'name' as const, client: match };
+            }
+        }
+
+        return null;
+    }, [newClientData.name, newClientData.document, newClientData.phone, newClientData.phone2, clients, showNewClientForm]);
+
     const selectedProduct = useMemo(
         () => products.find(p => p.id === currentProductId) ?? null,
         [products, currentProductId]
@@ -116,9 +193,11 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
         if (!q || q.length < 2) return [];
         return clients.filter(c =>
             c.name.toLowerCase().includes(q) ||
+            c.nickname?.toLowerCase().includes(q) ||
             c.document?.includes(q) ||
-            c.phone?.includes(q)
-        ).slice(0, 6);
+            c.phone?.includes(q) ||
+            c.phone2?.includes(q)
+        ).slice(0, 8);
     }, [clients, clientSearch]);
 
     // ───── Cálculo de área e preço ao vivo ─────
@@ -148,7 +227,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
         if (!selectedProduct) return 0;
         if (area <= 0) return effectivePricePerM2;
         const calc = area * effectivePricePerM2;
-        return calc < 10 ? 10 : Math.round(calc * 100) / 100;
+        return Math.round(calc * 100) / 100;
     }, [selectedProduct, area, effectivePricePerM2]);
 
     const relevantFinishings = useMemo(() => {
@@ -193,16 +272,19 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
     const itemsReady = items.length > 0;
 
     const hasUnsavedData = useMemo(
-        () => clientReady || itemsReady ||
+        () => clientReady || itemsReady || showNewClientForm ||
             currentProductId !== '' || currentWidth !== '' || currentHeight !== '',
-        [clientReady, itemsReady, currentProductId, currentWidth, currentHeight]
+        [clientReady, itemsReady, showNewClientForm, currentProductId, currentWidth, currentHeight]
     );
 
-    // ───── Ações ─────
+    // ───── Ações — cliente ─────
     function applyClient(c: Client) {
         setClientName(c.name);
+        setClientNickname(c.nickname ?? '');
+        setClientContact(c.contact ?? '');
         setClientDocument(maskDocument(c.document ?? ''));
         setClientPhone(maskPhone(c.phone ?? ''));
+        setClientPhone2(maskPhone(c.phone2 ?? ''));
         if (c.ie)           setClientIe(c.ie);
         if (c.zip)          setClientZip(maskCEP(c.zip));
         if (c.street)       setClientStreet(c.street);
@@ -210,8 +292,84 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
         if (c.neighborhood) setClientNeighborhood(c.neighborhood);
         if (c.city)         setClientCity(c.city);
         if (c.state)        setClientState(c.state);
+        setSelectedClientId(c.id);
         setClientSearch('');
         setShowSuggestions(false);
+        setClientMode('filled');
+        setShowNewClientForm(false);
+    }
+
+    function resetClient() {
+        setClientMode('search');
+        setSelectedClientId(null);
+        setClientName('');
+        setClientNickname('');
+        setClientContact('');
+        setClientDocument('');
+        setClientIe('');
+        setClientPhone('');
+        setClientPhone2('');
+        setClientZip('');
+        setClientStreet('');
+        setClientNumber('');
+        setClientNeighborhood('');
+        setClientCity('');
+        setClientState('');
+        setClientSearch('');
+        setShowSuggestions(false);
+        setShowNewClientForm(false);
+        setNewClientData(EMPTY_NEW_CLIENT);
+        setNewClientError('');
+    }
+
+    async function handleNewClientCEPChange(raw: string) {
+        const masked = maskCEP(raw);
+        setNewClientData(p => ({ ...p, zip: masked }));
+        const digits = raw.replace(/\D/g, '');
+        if (digits.length !== 8) return;
+        setIsLoadingCEP(true);
+        const addr = await fetchAddressByCEP(digits);
+        setIsLoadingCEP(false);
+        if (!addr) return;
+        setNewClientData(p => ({
+            ...p,
+            street:       addr.logradouro,
+            neighborhood: addr.bairro,
+            city:         addr.localidade,
+            state:        addr.uf,
+        }));
+    }
+
+    async function handleCreateClient() {
+        if (!newClientData.name.trim()) {
+            setNewClientError('Nome é obrigatório.');
+            return;
+        }
+        setIsSavingClient(true);
+        setNewClientError('');
+        const result = await createClient({
+            name:         newClientData.name,
+            nickname:     newClientData.nickname     || undefined,
+            document:     newClientData.document     || undefined,
+            ie:           newClientData.ie           || undefined,
+            phone:        newClientData.phone        || undefined,
+            phone2:       newClientData.phone2       || undefined,
+            contact:      newClientData.contact      || undefined,
+            email:        newClientData.email        || undefined,
+            zip:          newClientData.zip          || undefined,
+            street:       newClientData.street       || undefined,
+            number:       newClientData.number       || undefined,
+            neighborhood: newClientData.neighborhood || undefined,
+            city:         newClientData.city         || undefined,
+            state:        newClientData.state        || undefined,
+        });
+        setIsSavingClient(false);
+        if (result.success && result.client) {
+            setNewClientData(EMPTY_NEW_CLIENT);
+            applyClient(result.client);
+        } else {
+            setNewClientError(result.error ?? 'Erro ao criar cliente.');
+        }
     }
 
     async function handleCEPChange(raw: string) {
@@ -315,6 +473,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
         setIsLoading(true);
 
         const result = await submitOrder({
+            clientId: selectedClientId ?? undefined,
             clientName: clientName.trim(),
             clientDocument,
             clientIe,
@@ -378,7 +537,6 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-        // mode é prop estática — não muda em runtime, não entra nas deps
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, handleCloseAttempt]);
 
@@ -442,96 +600,414 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                         {/* ───── 1. CLIENTE ───── */}
                         <Section
                             number={1}
-                            title="Dados do Cliente"
+                            title="Cliente"
                             color="blue"
                             done={clientReady}
-                            extra={
-                                <div className="relative w-72">
-                                    <div className="flex items-center gap-2 bg-background-dark border border-white/10 rounded-xl h-9 px-3 focus-within:border-primary transition-colors">
-                                        <Search size={13} className="text-slate-500 shrink-0" />
-                                        <input
-                                            className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
-                                            placeholder="Buscar cliente cadastrado..."
-                                            value={clientSearch}
-                                            onChange={e => { setClientSearch(e.target.value); setShowSuggestions(true); }}
-                                            onFocus={() => setShowSuggestions(true)}
-                                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                                        />
-                                    </div>
-                                    {showSuggestions && suggestions.length > 0 && (
-                                        <ul className="absolute top-full mt-1 left-0 right-0 z-50 bg-surface-dark border border-white/10 rounded-xl shadow-xl overflow-hidden">
-                                            {suggestions.map(c => (
-                                                <li key={c.id}>
-                                                    <button
-                                                        type="button"
-                                                        onMouseDown={() => applyClient(c)}
-                                                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
-                                                    >
-                                                        <UserRound size={14} className="text-primary shrink-0" />
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="text-sm text-white truncate">{c.name}</p>
-                                                            <div className="flex gap-2 mt-0.5">
-                                                                {c.document && <p className="text-[10px] text-slate-500 font-mono">{c.document}</p>}
-                                                                {c.phone && <p className="text-[10px] text-slate-500">{c.phone}</p>}
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            }
+                            overflowVisible={clientMode === 'search'}
                         >
-                            <div className="grid grid-cols-12 gap-4">
-                                <Field label="Nome / Razão Social" required className="col-span-12 md:col-span-6">
-                                    <input value={clientName} onChange={e => setClientName(e.target.value)}
-                                        placeholder="Nome do cliente ou empresa" className={inputBase} autoFocus />
-                                </Field>
-                                <Field label="CPF / CNPJ" className="col-span-6 md:col-span-3">
-                                    <input value={clientDocument} onChange={e => setClientDocument(maskDocument(e.target.value))}
-                                        placeholder="000.000.000-00" className={inputBase} inputMode="numeric" />
-                                </Field>
-                                <Field label="Insc. Estadual" className="col-span-6 md:col-span-3">
-                                    <input value={clientIe} onChange={e => setClientIe(e.target.value)}
-                                        placeholder="Isento ou número" className={inputBase} />
-                                </Field>
+                            {/* ── MODO BUSCA ── */}
+                            {clientMode === 'search' && !showNewClientForm && (
+                                <div className="flex flex-col items-center gap-5 py-6">
+                                    <div className="relative w-full max-w-xl">
+                                        <div className="flex items-center gap-3 bg-background-dark border border-white/10 rounded-xl h-12 px-4 focus-within:border-primary transition-colors shadow-lg">
+                                            <Search size={16} className="text-slate-500 shrink-0" />
+                                            <input
+                                                className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                                                placeholder="Buscar cliente por nome, fantasia, CPF/CNPJ..."
+                                                value={clientSearch}
+                                                onChange={e => { setClientSearch(e.target.value); setShowSuggestions(true); }}
+                                                onFocus={() => setShowSuggestions(true)}
+                                                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                                                autoFocus
+                                            />
+                                            {clientSearch && (
+                                                <button type="button" onClick={() => setClientSearch('')} className="text-slate-600 hover:text-slate-300 transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            )}
+                                        </div>
 
-                                <Field label="Telefone / WhatsApp" className="col-span-12 md:col-span-3">
-                                    <input value={clientPhone} onChange={e => setClientPhone(maskPhone(e.target.value))}
-                                        placeholder="(00) 00000-0000" className={inputBase} inputMode="tel" />
-                                </Field>
-                                <Field label="CEP" className="col-span-6 md:col-span-2">
-                                    <div className="relative">
-                                        <input value={clientZip} onChange={e => handleCEPChange(e.target.value)}
-                                            placeholder="00000-000" className={inputBase} inputMode="numeric" />
-                                        {isLoadingCEP && (
-                                            <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400 pointer-events-none" />
+                                        {/* Dropdown de sugestões */}
+                                        {showSuggestions && suggestions.length > 0 && (
+                                            <ul className="absolute top-full mt-1 left-0 right-0 z-50 bg-surface-dark border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                                                {suggestions.map(c => (
+                                                    <li key={c.id}>
+                                                        <button
+                                                            type="button"
+                                                            onMouseDown={() => applyClient(c)}
+                                                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0"
+                                                        >
+                                                            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-cyan-600 flex items-center justify-center text-sm font-bold text-background-dark shrink-0">
+                                                                {c.name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm text-white font-medium truncate">{c.name}</p>
+                                                                {c.nickname && (
+                                                                    <p className="text-[11px] text-primary truncate">{c.nickname}</p>
+                                                                )}
+                                                                <div className="flex gap-3 mt-0.5 flex-wrap">
+                                                                    {c.document && <span className="text-[10px] text-slate-500 font-mono">{c.document}</span>}
+                                                                    {c.phone && <span className="text-[10px] text-slate-500">{c.phone}</span>}
+                                                                    {c.phone2 && <span className="text-[10px] text-slate-500">{c.phone2}</span>}
+                                                                </div>
+                                                            </div>
+                                                            <ChevronRight size={14} className="text-slate-600 shrink-0" />
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+
+                                        {/* Nenhum resultado */}
+                                        {showSuggestions && clientSearch.length >= 2 && suggestions.length === 0 && (
+                                            <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-surface-dark border border-white/10 rounded-xl shadow-xl p-4 text-center">
+                                                <p className="text-sm text-slate-500">Nenhum cliente encontrado para &ldquo;{clientSearch}&rdquo;</p>
+                                            </div>
                                         )}
                                     </div>
-                                </Field>
-                                <Field label="Rua" className="col-span-12 md:col-span-5">
-                                    <input value={clientStreet} onChange={e => setClientStreet(e.target.value)}
-                                        placeholder="Logradouro" className={inputBase} />
-                                </Field>
-                                <Field label="Número" className="col-span-6 md:col-span-2">
-                                    <input value={clientNumber} onChange={e => setClientNumber(e.target.value)}
-                                        placeholder="Nº" className={inputBase} />
-                                </Field>
 
-                                <Field label="Bairro" className="col-span-12 md:col-span-4">
-                                    <input value={clientNeighborhood} onChange={e => setClientNeighborhood(e.target.value)}
-                                        placeholder="Bairro" className={inputBase} />
-                                </Field>
-                                <Field label="Cidade" className="col-span-8 md:col-span-6">
-                                    <input value={clientCity} onChange={e => setClientCity(e.target.value)}
-                                        placeholder="Cidade" className={inputBase} />
-                                </Field>
-                                <Field label="UF" className="col-span-4 md:col-span-2">
-                                    <input value={clientState} onChange={e => setClientState(e.target.value.toUpperCase().slice(0, 2))}
-                                        placeholder="UF" maxLength={2} className={`${inputBase} text-center font-mono uppercase`} />
-                                </Field>
-                            </div>
+                                    <div className="flex items-center gap-4 w-full max-w-xl">
+                                        <div className="flex-1 h-px bg-white/5" />
+                                        <span className="text-xs text-slate-600 font-medium">ou</span>
+                                        <div className="flex-1 h-px bg-white/5" />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewClientForm(true)}
+                                        className="group/newbtn relative h-10 px-5 overflow-hidden rounded-xl border border-white/10 text-sm font-semibold flex items-center gap-2"
+                                    >
+                                        <span className="absolute inset-0 bg-white/8 -translate-x-full group-hover/newbtn:translate-x-0 transition-transform duration-[250ms] ease-in-out rounded-xl" />
+                                        <span className="relative z-10 flex items-center gap-2 text-slate-400 group-hover/newbtn:text-white transition-colors duration-[250ms]">
+                                            <UserPlus size={15} />
+                                            Cadastrar novo cliente
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* ── FORMULÁRIO NOVO CLIENTE ── */}
+                            {clientMode === 'search' && showNewClientForm && (
+                                <div className="space-y-5">
+                                    <div className="flex items-center gap-2 text-xs text-slate-400 pb-1 border-b border-white/5">
+                                        <UserPlus size={13} className="text-primary" />
+                                        <span>Novo cliente — será salvo no banco de dados</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-12 gap-4">
+                                        <Field label="Nome / Razão Social" required className="col-span-12 md:col-span-6">
+                                            <input
+                                                value={newClientData.name}
+                                                onChange={e => setNewClientData(p => ({ ...p, name: e.target.value }))}
+                                                placeholder="Nome do cliente ou empresa"
+                                                className={inputBase}
+                                                autoFocus
+                                            />
+                                        </Field>
+                                        <Field label="Nome Fantasia" className="col-span-12 md:col-span-6">
+                                            <input
+                                                value={newClientData.nickname}
+                                                onChange={e => setNewClientData(p => ({ ...p, nickname: e.target.value }))}
+                                                placeholder="Como é conhecido (opcional)"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+
+                                        <Field label="CPF / CNPJ" className="col-span-6 md:col-span-3">
+                                            <input
+                                                value={newClientData.document}
+                                                onChange={e => setNewClientData(p => ({ ...p, document: maskDocument(e.target.value) }))}
+                                                placeholder="000.000.000-00"
+                                                className={inputBase}
+                                                inputMode="numeric"
+                                            />
+                                        </Field>
+                                        <Field label="Insc. Estadual" className="col-span-6 md:col-span-3">
+                                            <input
+                                                value={newClientData.ie}
+                                                onChange={e => setNewClientData(p => ({ ...p, ie: e.target.value }))}
+                                                placeholder="Isento ou número"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+                                        <Field label="Pessoa de Contato" className="col-span-12 md:col-span-6">
+                                            <input
+                                                value={newClientData.contact}
+                                                onChange={e => setNewClientData(p => ({ ...p, contact: e.target.value }))}
+                                                placeholder="Nome do responsável"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+
+                                        <Field label="Telefone Fixo" className="col-span-6 md:col-span-3">
+                                            <input
+                                                value={newClientData.phone}
+                                                onChange={e => setNewClientData(p => ({ ...p, phone: maskPhone(e.target.value) }))}
+                                                placeholder="(00) 0000-0000"
+                                                className={inputBase}
+                                                inputMode="tel"
+                                            />
+                                        </Field>
+                                        <Field label="Celular / WhatsApp" className="col-span-6 md:col-span-3">
+                                            <input
+                                                value={newClientData.phone2}
+                                                onChange={e => setNewClientData(p => ({ ...p, phone2: maskPhone(e.target.value) }))}
+                                                placeholder="(00) 00000-0000"
+                                                className={inputBase}
+                                                inputMode="tel"
+                                            />
+                                        </Field>
+                                        <Field label="E-mail" className="col-span-12 md:col-span-6">
+                                            <input
+                                                value={newClientData.email}
+                                                onChange={e => setNewClientData(p => ({ ...p, email: e.target.value }))}
+                                                placeholder="email@empresa.com"
+                                                className={inputBase}
+                                                type="email"
+                                            />
+                                        </Field>
+
+                                        {/* — Separador endereço — */}
+                                        <div className="col-span-12 flex items-center gap-3 pt-1">
+                                            <div className="flex-1 h-px bg-white/5" />
+                                            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Endereço</span>
+                                            <div className="flex-1 h-px bg-white/5" />
+                                        </div>
+
+                                        <Field label="CEP" className="col-span-6 md:col-span-2">
+                                            <div className="relative">
+                                                <input
+                                                    value={newClientData.zip ?? ''}
+                                                    onChange={e => handleNewClientCEPChange(e.target.value)}
+                                                    placeholder="00000-000"
+                                                    className={inputBase}
+                                                    inputMode="numeric"
+                                                />
+                                                {isLoadingCEP && (
+                                                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400 pointer-events-none" />
+                                                )}
+                                            </div>
+                                        </Field>
+                                        <Field label="Rua" className="col-span-12 md:col-span-7">
+                                            <input
+                                                value={newClientData.street ?? ''}
+                                                onChange={e => setNewClientData(p => ({ ...p, street: e.target.value }))}
+                                                placeholder="Logradouro"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+                                        <Field label="Número" className="col-span-6 md:col-span-3">
+                                            <input
+                                                value={newClientData.number ?? ''}
+                                                onChange={e => setNewClientData(p => ({ ...p, number: e.target.value }))}
+                                                placeholder="Nº"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+
+                                        <Field label="Bairro" className="col-span-12 md:col-span-4">
+                                            <input
+                                                value={newClientData.neighborhood ?? ''}
+                                                onChange={e => setNewClientData(p => ({ ...p, neighborhood: e.target.value }))}
+                                                placeholder="Bairro"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+                                        <Field label="Cidade" className="col-span-8 md:col-span-6">
+                                            <input
+                                                value={newClientData.city ?? ''}
+                                                onChange={e => setNewClientData(p => ({ ...p, city: e.target.value }))}
+                                                placeholder="Cidade"
+                                                className={inputBase}
+                                            />
+                                        </Field>
+                                        <Field label="UF" className="col-span-4 md:col-span-2">
+                                            <input
+                                                value={newClientData.state ?? ''}
+                                                onChange={e => setNewClientData(p => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))}
+                                                placeholder="UF"
+                                                maxLength={2}
+                                                className={`${inputBase} text-center font-mono uppercase`}
+                                            />
+                                        </Field>
+                                    </div>
+
+                                    {/* Aviso de possível duplicata */}
+                                    {duplicateWarning && (
+                                        <div className="flex items-start gap-3 text-xs bg-amber-500/8 border border-amber-500/25 rounded-xl px-4 py-3">
+                                            <AlertCircle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-amber-300 font-semibold">
+                                                    {duplicateWarning.type === 'document'
+                                                        ? 'Documento já cadastrado'
+                                                        : duplicateWarning.type === 'phone'
+                                                        ? 'Telefone já cadastrado'
+                                                        : 'Nome similar encontrado'}
+                                                </p>
+                                                <p className="text-amber-400/80 mt-0.5 truncate">
+                                                    Cliente existente:{' '}
+                                                    <span className="font-semibold text-amber-300">{duplicateWarning.client.name}</span>
+                                                    {duplicateWarning.client.nickname && (
+                                                        <span className="text-amber-400/60"> · {duplicateWarning.client.nickname}</span>
+                                                    )}
+                                                </p>
+                                                <p className="text-amber-500/60 mt-1">
+                                                    Verifique se não é um cadastro duplicado antes de salvar.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {newClientError && (
+                                        <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                                            <AlertCircle size={13} className="shrink-0" />
+                                            <span>{newClientError}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center gap-3 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowNewClientForm(false); setNewClientError(''); setNewClientData(EMPTY_NEW_CLIENT); }}
+                                            className="h-10 px-4 rounded-xl border border-white/10 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleCreateClient}
+                                            disabled={isSavingClient}
+                                            className="group/savebtn relative h-10 px-5 overflow-hidden rounded-xl border border-primary text-sm font-bold flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        >
+                                            <span className="absolute inset-0 bg-primary -translate-x-full group-hover/savebtn:translate-x-0 transition-transform duration-[250ms] ease-in-out rounded-xl" />
+                                            <span className="relative z-10 flex items-center gap-2 text-primary group-hover/savebtn:text-background-dark transition-colors duration-[250ms]">
+                                                {isSavingClient
+                                                    ? <Loader2 size={14} className="animate-spin" />
+                                                    : <Check size={14} className="stroke-[2.5]" />
+                                                }
+                                                Salvar e usar neste pedido
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ── MODO PREENCHIDO ── */}
+                            {clientMode === 'filled' && (
+                                <div className="space-y-5">
+                                    {/* Card do cliente selecionado */}
+                                    <div className="flex items-center gap-4 p-4 bg-primary/5 border border-white/8 border-l-2 border-l-primary rounded-xl">
+                                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-cyan-600 flex items-center justify-center text-base font-bold text-background-dark shrink-0 shadow-lg shadow-primary/20">
+                                            {clientName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <p className="text-sm font-bold text-white truncate">{clientName}</p>
+                                                {selectedClientId && (
+                                                    <span className="text-[9px] font-bold text-emerald-400/80 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                                                        Cadastrado
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {clientNickname && (
+                                                <p className="text-[11px] text-primary/80 truncate mt-0.5">{clientNickname}</p>
+                                            )}
+                                            <div className="flex gap-x-3 gap-y-0.5 mt-1 flex-wrap">
+                                                {clientDocument && <span className="text-[10px] text-slate-500 font-mono">{clientDocument}</span>}
+                                                {clientPhone && <span className="text-[10px] text-slate-400">{clientPhone}</span>}
+                                                {clientPhone2 && <span className="text-[10px] text-slate-400">{clientPhone2}</span>}
+                                                {clientContact && <span className="text-[10px] text-slate-500">Contato: {clientContact}</span>}
+                                                {(clientCity || clientState) && (
+                                                    <span className="text-[10px] text-slate-600">{[clientCity, clientState].filter(Boolean).join(' / ')}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={resetClient}
+                                            className="h-8 px-3 text-xs text-slate-500 hover:text-white border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-lg transition-colors shrink-0 flex items-center gap-1.5"
+                                        >
+                                            <RefreshCw size={11} />
+                                            Trocar
+                                        </button>
+                                    </div>
+
+                                    {/* Campos editáveis */}
+                                    <div className="grid grid-cols-12 gap-4">
+
+                                        {/* — Identificação — */}
+                                        <Field label="Nome / Razão Social" required className="col-span-12 md:col-span-7">
+                                            <input value={clientName} onChange={e => setClientName(e.target.value)}
+                                                placeholder="Nome do cliente ou empresa" className={inputBase} />
+                                        </Field>
+                                        <Field label="Nome Fantasia" className="col-span-12 md:col-span-5">
+                                            <input value={clientNickname} onChange={e => setClientNickname(e.target.value)}
+                                                placeholder="Como é conhecido" className={inputBase} />
+                                        </Field>
+
+                                        <Field label="CPF / CNPJ" className="col-span-6 md:col-span-4">
+                                            <input value={clientDocument} onChange={e => setClientDocument(maskDocument(e.target.value))}
+                                                placeholder="000.000.000-00" className={inputBase} inputMode="numeric" />
+                                        </Field>
+                                        <Field label="Insc. Estadual" className="col-span-6 md:col-span-4">
+                                            <input value={clientIe} onChange={e => setClientIe(e.target.value)}
+                                                placeholder="Isento ou número" className={inputBase} />
+                                        </Field>
+                                        <Field label="Pessoa de Contato" className="col-span-12 md:col-span-4">
+                                            <input value={clientContact} onChange={e => setClientContact(e.target.value)}
+                                                placeholder="Nome do responsável" className={inputBase} />
+                                        </Field>
+
+                                        <Field label="Telefone Fixo" className="col-span-6 md:col-span-4">
+                                            <input value={clientPhone} onChange={e => setClientPhone(maskPhone(e.target.value))}
+                                                placeholder="(00) 0000-0000" className={inputBase} inputMode="tel" />
+                                        </Field>
+                                        <Field label="Celular / WhatsApp" className="col-span-6 md:col-span-4">
+                                            <input value={clientPhone2} onChange={e => setClientPhone2(maskPhone(e.target.value))}
+                                                placeholder="(00) 00000-0000" className={inputBase} inputMode="tel" />
+                                        </Field>
+
+                                        {/* — Separador endereço — */}
+                                        <div className="col-span-12 flex items-center gap-3 pt-1">
+                                            <div className="flex-1 h-px bg-white/5" />
+                                            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Endereço de Entrega</span>
+                                            <div className="flex-1 h-px bg-white/5" />
+                                        </div>
+
+                                        {/* — Endereço — */}
+                                        <Field label="CEP" className="col-span-6 md:col-span-2">
+                                            <div className="relative">
+                                                <input value={clientZip} onChange={e => handleCEPChange(e.target.value)}
+                                                    placeholder="00000-000" className={inputBase} inputMode="numeric" />
+                                                {isLoadingCEP && (
+                                                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400 pointer-events-none" />
+                                                )}
+                                            </div>
+                                        </Field>
+                                        <Field label="Rua" className="col-span-12 md:col-span-7">
+                                            <input value={clientStreet} onChange={e => setClientStreet(e.target.value)}
+                                                placeholder="Logradouro" className={inputBase} />
+                                        </Field>
+                                        <Field label="Número" className="col-span-6 md:col-span-3">
+                                            <input value={clientNumber} onChange={e => setClientNumber(e.target.value)}
+                                                placeholder="Nº" className={inputBase} />
+                                        </Field>
+
+                                        <Field label="Bairro" className="col-span-12 md:col-span-4">
+                                            <input value={clientNeighborhood} onChange={e => setClientNeighborhood(e.target.value)}
+                                                placeholder="Bairro" className={inputBase} />
+                                        </Field>
+                                        <Field label="Cidade" className="col-span-8 md:col-span-6">
+                                            <input value={clientCity} onChange={e => setClientCity(e.target.value)}
+                                                placeholder="Cidade" className={inputBase} />
+                                        </Field>
+                                        <Field label="UF" className="col-span-4 md:col-span-2">
+                                            <input value={clientState} onChange={e => setClientState(e.target.value.toUpperCase().slice(0, 2))}
+                                                placeholder="UF" maxLength={2} className={`${inputBase} text-center font-mono uppercase`} />
+                                        </Field>
+                                    </div>
+                                </div>
+                            )}
                         </Section>
 
                         {/* ───── 2. ADICIONAR ITEM ───── */}
@@ -664,13 +1140,13 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                                                     />
                                                     <button type="button" onClick={() => setCurrentQty(q => q + 1)}
                                                         className="w-9 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
-                                                        <Plus size={14} />
+                                                        <Plus size={12} />
                                                     </button>
                                                 </div>
                                             </Field>
                                         </div>
 
-                                        {/* Acabamento - chips */}
+                                        {/* Acabamento */}
                                         <div className="mt-4 pt-4 border-t border-white/5">
                                             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
                                                 <Wrench size={10} /> Acabamento
@@ -753,7 +1229,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                                         )}
 
                                         <div className="mt-auto pt-4 grid grid-cols-3 gap-2">
-                                            {/* Limpar — slide fill */}
+                                            {/* Limpar */}
                                             <button
                                                 type="button"
                                                 onClick={resetItemForm}
@@ -762,7 +1238,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                                                 <span className="absolute inset-0 bg-white/10 -translate-x-full group-hover/clearbtn:translate-x-0 transition-transform duration-[250ms] ease-in-out rounded-xl" />
                                                 <span className="relative z-10 text-slate-400 group-hover/clearbtn:text-white transition-colors duration-[250ms]">Limpar</span>
                                             </button>
-                                            {/* Adicionar — slide fill */}
+                                            {/* Adicionar */}
                                             <button
                                                 type="button"
                                                 onClick={handleAddItem}
@@ -825,7 +1301,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                                                         </span>
                                                     )}
                                                     {item.observations && (
-                                                        <span className="text-[10px] text-slate-500 italic">"{item.observations}"</span>
+                                                        <span className="text-[10px] text-slate-500 italic">&ldquo;{item.observations}&rdquo;</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -849,16 +1325,13 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                                             <td className="p-4 text-right font-mono text-emerald-400 font-bold pr-6">{formatCurrency(item.total)}</td>
                                             <td className="p-2 text-center">
                                                 <div className="flex justify-center">
-                                                    {/* Trash — fiel ao Uiverse: pill vermelho, texto de cima, ícone cai */}
                                                     <button
                                                         onClick={() => handleRemoveItem(idx)}
                                                         className="group/delbtn relative flex items-center justify-center h-8 w-8 hover:w-28 rounded-full overflow-hidden bg-slate-800 hover:bg-red-500 transition-all duration-300 opacity-0 group-hover:opacity-100 shrink-0"
                                                     >
-                                                        {/* Texto: começa acima do botão (top:-16px, font 2px), entra na hover */}
                                                         <span className="absolute -top-4 left-0 right-0 text-center text-white font-semibold text-[2px] group-hover/delbtn:text-[11px] group-hover/delbtn:translate-y-[22px] pointer-events-none whitespace-nowrap transition-all duration-300">
                                                             Remover
                                                         </span>
-                                                        {/* Ícone: pequeno → grande, cai 60% da própria altura (como no original) */}
                                                         <Trash2 className="shrink-0 text-white w-3 h-3 group-hover/delbtn:w-7 group-hover/delbtn:h-7 group-hover/delbtn:translate-y-[60%] transition-all duration-300" />
                                                     </button>
                                                 </div>
@@ -947,7 +1420,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
                                     </p>
                                 )}
                             </div>
-                            {/* Concluir Pedido — slide fill */}
+                            {/* Concluir Pedido */}
                             <button
                                 onClick={handleSubmit}
                                 disabled={isLoading || items.length === 0 || !clientReady}
@@ -979,7 +1452,7 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
 const inputBase = 'w-full bg-background-dark border border-white/5 hover:border-white/10 focus:border-primary rounded-xl h-11 px-3 text-sm text-white outline-none transition-colors placeholder:text-slate-700';
 
 function Section({
-    number, title, color, children, extra, done, noPadding,
+    number, title, color, children, extra, done, noPadding, overflowVisible,
 }: {
     number: number;
     title: string;
@@ -988,6 +1461,7 @@ function Section({
     extra?: React.ReactNode;
     done?: boolean;
     noPadding?: boolean;
+    overflowVisible?: boolean;
 }) {
     const colorMap = {
         blue: 'bg-primary',
@@ -996,8 +1470,8 @@ function Section({
         cyan: 'bg-primary',
     };
     return (
-        <section className="bg-surface-dark/50 border border-white/5 rounded-2xl overflow-hidden">
-            <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-white/5">
+        <section className={`bg-surface-dark/50 border border-white/5 rounded-2xl ${overflowVisible ? 'overflow-visible' : 'overflow-hidden'}`}>
+            <header className={`flex items-center justify-between gap-4 px-6 py-4 border-b border-white/5 ${overflowVisible ? 'rounded-t-2xl overflow-hidden' : ''}`}>
                 <div className="flex items-center gap-3">
                     <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold text-background-dark ${colorMap[color]}`}>
                         {done ? <Check size={14} className="stroke-[3]" /> : number}

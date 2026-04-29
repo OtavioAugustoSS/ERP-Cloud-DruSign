@@ -12,6 +12,7 @@ type RawClient = {
     ie?: string | null; zip?: string | null; street?: string | null;
     number?: string | null; neighborhood?: string | null;
     city?: string | null; state?: string | null; notes?: string | null;
+    nickname?: string | null; contact?: string | null; phone2?: string | null;
     _count?: { order?: number; orders?: number };
 };
 
@@ -29,6 +30,9 @@ function toClient(c: RawClient): Client {
         neighborhood: c.neighborhood ?? null,
         city:         c.city ?? null,
         state:        c.state ?? null,
+        nickname:     c.nickname ?? null,
+        contact:      c.contact ?? null,
+        phone2:       c.phone2 ?? null,
         notes:        c.notes ?? null,
         orderCount:   c._count?.order ?? c._count?.orders ?? 0,
         createdAt:    c.createdAt,
@@ -67,6 +71,9 @@ export async function createClient(
                 neighborhood: input.neighborhood?.trim() || null,
                 city:         input.city?.trim()         || null,
                 state:        input.state?.trim()        || null,
+                nickname:     input.nickname?.trim()     || null,
+                contact:      input.contact?.trim()      || null,
+                phone2:       input.phone2?.trim()       || null,
                 notes:        input.notes?.trim()        || null,
                 updatedAt:    new Date(),
             },
@@ -102,6 +109,9 @@ export async function updateClient(
                 ...(input.neighborhood !== undefined && { neighborhood: input.neighborhood.trim() || null }),
                 ...(input.city         !== undefined && { city:         input.city.trim()         || null }),
                 ...(input.state        !== undefined && { state:        input.state.trim()        || null }),
+                ...(input.nickname     !== undefined && { nickname:     input.nickname.trim()     || null }),
+                ...(input.contact      !== undefined && { contact:      input.contact.trim()      || null }),
+                ...(input.phone2       !== undefined && { phone2:       input.phone2.trim()       || null }),
                 ...(input.notes        !== undefined && { notes:        input.notes.trim()        || null }),
                 updatedAt: new Date(),
             },

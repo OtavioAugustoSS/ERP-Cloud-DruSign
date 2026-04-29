@@ -68,6 +68,7 @@ export async function login(email: string, password: string): Promise<{ user: Us
         const ttlSeconds = getSessionTtlSeconds();
         const token = await new SignJWT({
             id: user.id,
+            name: user.name,
             email: user.email,
             role: user.role,
         })

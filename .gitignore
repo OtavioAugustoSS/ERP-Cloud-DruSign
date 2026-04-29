@@ -49,3 +49,6 @@ next-env.d.ts
 # user-uploaded files (dev). Keep the directory tracked via .gitkeep.
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# Arquivos legados com dados sensíveis de clientes
+*.prn

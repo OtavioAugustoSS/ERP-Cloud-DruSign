@@ -42,6 +42,13 @@ const nextConfig: NextConfig = {
     poweredByHeader: false, // Esconde header "X-Powered-By: Next.js"
     reactStrictMode: true,
 
+    // Permite Server Actions via túnel Cloudflare (teste externo)
+    experimental: {
+        serverActions: {
+            allowedOrigins: ['*.trycloudflare.com'],
+        },
+    },
+
     async headers() {
         return [
             {
