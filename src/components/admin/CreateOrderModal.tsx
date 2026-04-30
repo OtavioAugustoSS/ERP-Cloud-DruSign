@@ -7,7 +7,7 @@ import {
     UserPlus, ChevronRight, RefreshCw,
 } from 'lucide-react';
 import { submitOrder } from '@/actions/order';
-import { createClient } from '@/actions/client';
+import { createClient, updateClient } from '@/actions/client';
 import { formatCurrency } from '@/lib/utils/price';
 import { maskCEP, maskDocument, maskPhone } from '@/lib/utils/masks';
 import { fetchAddressByCEP } from '@/lib/utils/viaCEP';
@@ -509,14 +509,34 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
             notes,
         });
 
-        setIsLoading(false);
-
-        if (result.success) {
-            onSuccess();
-            onClose();
-        } else {
+        if (!result.success) {
+            setIsLoading(false);
             setSubmitError(result.error ?? 'Erro ao criar pedido.');
+            return;
         }
+
+        // Persist any edits made to the existing client's fields during order creation
+        if (selectedClientId) {
+            await updateClient(selectedClientId, {
+                name:         clientName.trim()         || undefined,
+                nickname:     clientNickname.trim()     || undefined,
+                contact:      clientContact.trim()      || undefined,
+                document:     clientDocument.trim()     || undefined,
+                ie:           clientIe.trim()           || undefined,
+                phone:        clientPhone.trim()        || undefined,
+                phone2:       clientPhone2.trim()       || undefined,
+                zip:          clientZip.trim()          || undefined,
+                street:       clientStreet.trim()       || undefined,
+                number:       clientNumber.trim()       || undefined,
+                neighborhood: clientNeighborhood.trim() || undefined,
+                city:         clientCity.trim()         || undefined,
+                state:        clientState.trim()        || undefined,
+            }).catch(() => {/* order already saved — client update is best-effort */});
+        }
+
+        setIsLoading(false);
+        onSuccess();
+        onClose();
     };
 
     const handleCloseAttempt = useCallback(() => {

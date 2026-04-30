@@ -47,7 +47,7 @@ function notifMeta(message: string): NotifMeta {
         return { icon: <PackageCheck size={13} />, accentBg: 'bg-primary',    cardBg: 'bg-primary/5',    cardBorder: 'border-primary/20',    iconBg: 'bg-primary/10',    iconColor: 'text-primary'    };
     if (m.includes('acabamento'))
         return { icon: <Scissors size={13} />,     accentBg: 'bg-purple-400', cardBg: 'bg-purple-500/5', cardBorder: 'border-purple-500/20', iconBg: 'bg-purple-500/10', iconColor: 'text-purple-400' };
-    if (m.includes('produção'))
+    if (m.includes('produção') || m.includes('novo pedido'))
         return { icon: <Wrench size={13} />,       accentBg: 'bg-blue-400',   cardBg: 'bg-blue-500/5',   cardBorder: 'border-blue-500/20',   iconBg: 'bg-blue-500/10',   iconColor: 'text-blue-400'   };
     return     { icon: <Bell size={13} />,         accentBg: 'bg-primary',    cardBg: 'bg-primary/5',    cardBorder: 'border-primary/20',    iconBg: 'bg-primary/10',    iconColor: 'text-primary'    };
 }

@@ -107,10 +107,12 @@ export default function AdminSidebar() {
                     )}
                 </nav>
 
-                {/* ── Notificações ── */}
-                <div className="px-3 pb-1 shrink-0">
-                    <NotificationBell sidebarMode={true} sidebarLocked={locked} />
-                </div>
+                {/* ── Notificações (admin only) ── */}
+                {isAdmin && (
+                    <div className="px-3 pb-1 shrink-0">
+                        <NotificationBell sidebarMode={true} sidebarLocked={locked} />
+                    </div>
+                )}
 
                 {/* ── Usuário + logout ── */}
                 <div className="py-3 px-3 border-t border-white/5 flex flex-col gap-1 shrink-0">

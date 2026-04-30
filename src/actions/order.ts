@@ -4,6 +4,7 @@ import prisma from '@/lib/db';
 import { Order, OrderInput, OrderStatus } from '@/types';
 import { requireUser, requireAdmin } from '@/lib/auth/session';
 import { audit } from '@/lib/auth/audit';
+import { createNotification } from './notification';
 
 const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
@@ -115,6 +116,12 @@ export const submitOrder = async (orderData: OrderInput): Promise<{ success: boo
                 itemCount: newOrder.orderitem.length,
             },
         });
+
+        await createNotification(
+            'admin',
+            `Novo pedido criado: ${newOrder.clientName || 'Cliente'} — OS #${newOrder.id.slice(0, 8).toUpperCase()}`,
+            newOrder.id
+        );
 
         const row = newOrder.orderitem;
         return {
@@ -245,8 +252,6 @@ export const getHistoryOrders = async (take = 200, skip = 0): Promise<Order[]> =
     }
 };
 
-import { createNotification } from './notification';
-
 // ── updateOrderStatus ─────────────────────────────────────────────────────────
 export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<{ success: boolean }> => {
     await requireUser();
@@ -263,13 +268,21 @@ export const updateOrderStatus = async (id: string, status: OrderStatus): Promis
             details: { from: previous?.status, to: status },
         });
 
-        const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const client = order.clientName || 'Cliente';
+        const shortId = id.slice(0, 8).toUpperCase();
+
+        // Admin inicia ou conclui/cancela → avisa funcionário
+        // Funcionário avança produção → avisa admin
         if (status === 'IN_PRODUCTION')
-            await createNotification('employee', `Novo serviço em produção (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`, id);
+            await createNotification('employee', `Nova OS em produção: ${client} — #${shortId}`, id);
         else if (status === 'FINISHING')
-            await createNotification('employee', `Pedido em acabamento (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`, id);
+            await createNotification('admin', `Em acabamento: ${client} — #${shortId}`, id);
         else if (status === 'READY_FOR_SHIPPING')
-            await createNotification('admin', `Pedido pronto para envio (${time}): Pedido #${id.slice(0, 8)} - Cliente: ${order.clientName || 'N/A'}`, id);
+            await createNotification('admin', `Pronto para envio: ${client} — #${shortId}`, id);
+        else if (status === 'COMPLETED')
+            await createNotification('employee', `Pedido concluído: ${client} — #${shortId}`, id);
+        else if (status === 'CANCELLED')
+            await createNotification('employee', `Pedido cancelado: ${client} — #${shortId}`, id);
 
         return { success: true };
     } catch (error) {

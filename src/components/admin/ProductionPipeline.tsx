@@ -38,8 +38,8 @@ export default function ProductionPipeline({ currentStatus = 'PENDING' }: Produc
     }
 
     return (
-        <div className="w-full py-6 px-4">
-            <div className="flex items-start w-full">
+        <div className="w-full py-5 sm:py-6 px-2 sm:px-4 overflow-x-auto">
+            <div className="flex items-start min-w-max sm:min-w-0 sm:w-full">
                 {STEPS.map((step, idx) => {
                     const isCompleted = idx < currentIndex;
                     const isCurrent   = idx === currentIndex;

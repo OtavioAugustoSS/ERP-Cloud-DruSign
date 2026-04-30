@@ -73,7 +73,7 @@ export default function OrderDetailActions({ orderId, currentStatus, isAdmin }: 
     }
 
     return (
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 space-y-3">
+        <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 sm:p-5 space-y-3">
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Ações</h3>
 
             {next && (

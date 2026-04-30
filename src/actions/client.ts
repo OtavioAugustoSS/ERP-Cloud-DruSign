@@ -1,6 +1,7 @@
 'use server'
 
 import prisma from '@/lib/db';
+import { revalidatePath } from 'next/cache';
 import { requireUser, requireAdmin } from '@/lib/auth/session';
 import { audit } from '@/lib/auth/audit';
 import type { Client, CreateClientInput, UpdateClientInput } from '@/types';
@@ -121,6 +122,7 @@ export async function updateClient(
             targetId: id,
             details: { fields: Object.keys(input) },
         });
+        revalidatePath('/admin/clients');
         return { success: true };
     } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '';
