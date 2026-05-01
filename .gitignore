@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Arquivos legados com dados sensíveis de clientes
 *.prn
+
+# Log temporário do tunnel (gerado por tunnel.ps1)
+tunnel.log

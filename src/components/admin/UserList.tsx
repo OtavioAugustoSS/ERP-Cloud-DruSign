@@ -147,169 +147,224 @@ export default function UserList({ initialUsers }: UserListProps) {
             )}
 
             {/* Header */}
-            <header className="flex-none px-8 py-6 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
-                <div className="flex items-end justify-between gap-4 animate-fade-in-up">
+            <header className="flex-none px-4 sm:px-8 py-4 sm:py-6 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
+                <div className="flex items-center justify-between gap-3 animate-fade-in-up">
                     <div>
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-white text-3xl font-bold leading-tight tracking-tight">Usuários</h2>
-                            <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full bg-white/5 border border-white/10 text-slate-400 text-xs font-bold tabular-nums">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <h2 className="text-white text-xl sm:text-3xl font-bold leading-tight tracking-tight">Usuários</h2>
+                            <span className="inline-flex items-center justify-center h-5 sm:h-6 min-w-[1.25rem] sm:min-w-[1.5rem] px-1.5 sm:px-2 rounded-full bg-white/5 border border-white/10 text-slate-400 text-xs font-bold tabular-nums">
                                 {users.length}
                             </span>
                         </div>
-                        <p className="text-slate-400 text-sm font-normal mt-0.5">Gerencie os acessos e colaboradores do sistema.</p>
+                        <p className="text-slate-400 text-xs sm:text-sm font-normal mt-0.5 hidden sm:block">Gerencie os acessos e colaboradores do sistema.</p>
                     </div>
                     <button
                         onClick={handleOpenModal}
-                        className="relative overflow-hidden group flex items-center gap-2 h-10 pl-4 pr-5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-semibold text-sm transition-all hover:border-primary/40 shadow-[0_0_12px_rgba(19,164,236,0.06)] hover:shadow-[0_0_20px_rgba(19,164,236,0.15)]"
+                        className="relative overflow-hidden group flex items-center gap-2 h-9 sm:h-10 px-3 sm:pl-4 sm:pr-5 rounded-xl bg-primary/10 border border-primary/20 text-primary font-semibold text-sm transition-all hover:border-primary/40 shadow-[0_0_12px_rgba(19,164,236,0.06)] hover:shadow-[0_0_20px_rgba(19,164,236,0.15)]"
                     >
                         <span className="absolute inset-0 bg-primary -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out rounded-xl" />
                         <Icons.Plus size={16} className="relative z-10 group-hover:text-black transition-colors duration-300" />
-                        <span className="relative z-10 group-hover:text-black transition-colors duration-300 text-xs font-bold">Novo Usuário</span>
+                        <span className="relative z-10 group-hover:text-black transition-colors duration-300 text-xs font-bold hidden sm:inline">Novo Usuário</span>
                     </button>
                 </div>
             </header>
 
-            <div className="flex-1 overflow-auto p-8 pt-6 space-y-6">
+            <div className="flex-1 overflow-auto p-4 sm:p-8 pt-4 sm:pt-6 space-y-4 sm:space-y-6">
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 animate-fade-in-up animate-delay-100">
-                    <div className="bg-surface-dark/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3">
-                        <div className="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                            <Users size={17} />
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 animate-fade-in-up animate-delay-100">
+                    <div className="bg-surface-dark/50 border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                        <div className="size-8 sm:size-9 rounded-lg sm:rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                            <Users size={15} />
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-white leading-none">{users.length}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">Total de usuários</p>
-                        </div>
-                    </div>
-                    <div className="bg-surface-dark/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3">
-                        <div className="size-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
-                            <ShieldCheck size={17} />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-white leading-none">{admins}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">Administradores</p>
+                        <div className="min-w-0">
+                            <p className="text-xl sm:text-2xl font-bold text-white leading-none">{users.length}</p>
+                            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">Total</p>
                         </div>
                     </div>
-                    <div className="bg-surface-dark/50 border border-white/5 rounded-2xl p-4 flex items-center gap-3">
-                        <div className="size-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                            <UserCheck size={17} />
+                    <div className="bg-surface-dark/50 border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                        <div className="size-8 sm:size-9 rounded-lg sm:rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                            <ShieldCheck size={15} />
                         </div>
-                        <div>
-                            <p className="text-2xl font-bold text-white leading-none">{employees}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">Funcionários</p>
+                        <div className="min-w-0">
+                            <p className="text-xl sm:text-2xl font-bold text-white leading-none">{admins}</p>
+                            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">Admin</p>
+                        </div>
+                    </div>
+                    <div className="bg-surface-dark/50 border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                        <div className="size-8 sm:size-9 rounded-lg sm:rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            <UserCheck size={15} />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xl sm:text-2xl font-bold text-white leading-none">{employees}</p>
+                            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 truncate">Funcionários</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Tabela */}
+                {/* Tabela / Cards */}
                 <div className="rounded-2xl border border-white/5 bg-surface-dark/50 overflow-hidden shadow-xl animate-fade-in-up animate-delay-200">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-white/[0.06] bg-black/20 text-slate-500 text-xs uppercase tracking-wider font-semibold">
-                                <th className="p-4 pl-6">Usuário</th>
-                                <th className="p-4">Contato</th>
-                                <th className="p-4 text-center">Cargo</th>
-                                <th className="p-4 text-center">Membro desde</th>
-                                <th className="p-4 pr-6 text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/[0.04] text-sm text-slate-300">
-                            {users.map((user) => {
-                                const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-                                const gradient = getAvatarGradient(user.id || user.name);
-                                const isConfirming = confirmDelete === user.id;
 
-                                return (
-                                    <tr key={user.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        {/* Avatar + Nome */}
-                                        <td className="p-4 pl-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border border-white/10 shrink-0`}>
-                                                    {user.image ? (
-                                                        <img src={user.image} alt={user.name} className="w-full h-full object-cover rounded-full" />
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-white select-none">{initials}</span>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="text-white font-medium leading-tight">{user.name}</div>
-                                                    <div className="text-xs text-slate-500 mt-0.5">{user.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        {/* Contato */}
-                                        <td className="p-4 text-slate-400 text-sm">
-                                            {user.phone || <span className="text-slate-700">—</span>}
-                                        </td>
-
-                                        {/* Cargo */}
-                                        <td className="p-4 text-center">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                                                user.role === 'admin'
-                                                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
-                                                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                            }`}>
-                                                {user.role === 'admin'
-                                                    ? <><ShieldCheck size={11} /> Admin</>
-                                                    : <><UserCheck size={11} /> Funcionário</>
-                                                }
-                                            </span>
-                                        </td>
-
-                                        {/* Membro desde */}
-                                        <td className="p-4 text-center text-slate-500 text-xs">
-                                            {formatMemberSince(user.createdAt)}
-                                        </td>
-
-                                        {/* Ações */}
-                                        <td className="p-4 pr-6 text-right">
-                                            {isConfirming ? (
-                                                <div className="flex items-center justify-end gap-2 animate-fade-in">
-                                                    <button
-                                                        onClick={() => handleDelete(user.id)}
-                                                        className="text-xs px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-lg hover:bg-red-500/25 transition-colors font-medium"
-                                                    >
-                                                        Confirmar exclusão
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirmDelete(null)}
-                                                        className="text-slate-500 hover:text-white transition-colors p-1"
-                                                    >
-                                                        <Icons.X size={14} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        onClick={() => handleEdit(user)}
-                                                        className="size-8 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white flex items-center justify-center transition-all"
-                                                        title="Editar usuário"
-                                                    >
-                                                        <Icons.Edit size={15} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirmDelete(user.id)}
-                                                        className="size-8 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 flex items-center justify-center transition-all"
-                                                        title="Excluir usuário"
-                                                    >
-                                                        <Icons.Trash size={15} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-
-                    {users.length === 0 && (
+                    {users.length === 0 ? (
                         <div className="py-16 flex flex-col items-center gap-3 text-slate-600">
                             <Icons.User size={32} className="opacity-30" />
                             <p className="text-sm">Nenhum usuário cadastrado.</p>
                         </div>
+                    ) : (
+                        <>
+                            {/* Mobile: lista de cards */}
+                            <div className="sm:hidden divide-y divide-white/[0.04]">
+                                {users.map((user) => {
+                                    const inits = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                                    const gradient = getAvatarGradient(user.id || user.name);
+                                    const isConfirming = confirmDelete === user.id;
+                                    return (
+                                        <div key={user.id} className="flex items-center gap-3 px-4 py-3">
+                                            <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border border-white/10 shrink-0`}>
+                                                {user.image
+                                                    ? <img src={user.image} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                                                    : <span className="text-xs font-bold text-white select-none">{inits}</span>
+                                                }
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-white font-medium text-sm truncate">{user.name}</span>
+                                                    <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                                        user.role === 'admin'
+                                                            ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                                                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                    }`}>
+                                                        {user.role === 'admin' ? 'Admin' : 'Func.'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 mt-0.5 truncate">{user.email}</p>
+                                            </div>
+                                            <div className="shrink-0 flex items-center gap-1">
+                                                {isConfirming ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleDelete(user.id)}
+                                                            className="text-[11px] px-2.5 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-lg hover:bg-red-500/25 transition-colors font-medium"
+                                                        >
+                                                            Excluir
+                                                        </button>
+                                                        <button onClick={() => setConfirmDelete(null)} className="text-slate-500 p-1">
+                                                            <Icons.X size={14} />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleEdit(user)}
+                                                            className="size-8 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white flex items-center justify-center transition-all"
+                                                        >
+                                                            <Icons.Edit size={15} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setConfirmDelete(user.id)}
+                                                            className="size-8 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 flex items-center justify-center transition-all"
+                                                        >
+                                                            <Icons.Trash size={15} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Desktop: tabela */}
+                            <table className="hidden sm:table w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/[0.06] bg-black/20 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                                        <th className="p-4 pl-6">Usuário</th>
+                                        <th className="p-4">Contato</th>
+                                        <th className="p-4 text-center">Cargo</th>
+                                        <th className="p-4 text-center">Membro desde</th>
+                                        <th className="p-4 pr-6 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/[0.04] text-sm text-slate-300">
+                                    {users.map((user) => {
+                                        const inits = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                                        const gradient = getAvatarGradient(user.id || user.name);
+                                        const isConfirming = confirmDelete === user.id;
+                                        return (
+                                            <tr key={user.id} className="hover:bg-white/[0.02] transition-colors group">
+                                                <td className="p-4 pl-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border border-white/10 shrink-0`}>
+                                                            {user.image
+                                                                ? <img src={user.image} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                                                                : <span className="text-xs font-bold text-white select-none">{inits}</span>
+                                                            }
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-white font-medium leading-tight">{user.name}</div>
+                                                            <div className="text-xs text-slate-500 mt-0.5">{user.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-slate-400 text-sm">
+                                                    {user.phone || <span className="text-slate-700">—</span>}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                                        user.role === 'admin'
+                                                            ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                                                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                    }`}>
+                                                        {user.role === 'admin'
+                                                            ? <><ShieldCheck size={11} /> Admin</>
+                                                            : <><UserCheck size={11} /> Funcionário</>
+                                                        }
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-center text-slate-500 text-xs">
+                                                    {formatMemberSince(user.createdAt)}
+                                                </td>
+                                                <td className="p-4 pr-6 text-right">
+                                                    {isConfirming ? (
+                                                        <div className="flex items-center justify-end gap-2 animate-fade-in">
+                                                            <button
+                                                                onClick={() => handleDelete(user.id)}
+                                                                className="text-xs px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-lg hover:bg-red-500/25 transition-colors font-medium"
+                                                            >
+                                                                Confirmar exclusão
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDelete(null)}
+                                                                className="text-slate-500 hover:text-white transition-colors p-1"
+                                                            >
+                                                                <Icons.X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button
+                                                                onClick={() => handleEdit(user)}
+                                                                className="size-8 rounded-lg hover:bg-white/5 text-slate-500 hover:text-white flex items-center justify-center transition-all"
+                                                                title="Editar usuário"
+                                                            >
+                                                                <Icons.Edit size={15} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDelete(user.id)}
+                                                                className="size-8 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 flex items-center justify-center transition-all"
+                                                                title="Excluir usuário"
+                                                            >
+                                                                <Icons.Trash size={15} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </>
                     )}
                 </div>
             </div>

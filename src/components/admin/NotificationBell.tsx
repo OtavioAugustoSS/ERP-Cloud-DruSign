@@ -58,12 +58,15 @@ interface NotificationBellProps {
     sidebarMode?: boolean;
     /** Quando true, os labels da sidebar ficam ocultos (sidebar travada). */
     sidebarLocked?: boolean;
+    /** Renderiza como item da bottom nav mobile — painel abre para cima. */
+    bottomNavMode?: boolean;
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function NotificationBell({
     sidebarMode   = false,
     sidebarLocked = false,
+    bottomNavMode = false,
 }: NotificationBellProps) {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -131,15 +134,17 @@ export default function NotificationBell({
         setMarkingAll(false);
     };
 
-    // ── Painel (JSX reutilizado entre inline e portal) ────────────────────────
+    // ── Painel (JSX reutilizado entre inline, sidebar e bottom nav) ─────────────
     const panel = (
         <div
             ref={panelRef}
-            className="w-[22rem] rounded-2xl border border-white/10 bg-[#141414] shadow-2xl shadow-black/60 overflow-hidden"
+            className={`${bottomNavMode ? '' : 'w-[22rem] '}rounded-2xl border border-white/10 bg-[#141414] shadow-2xl shadow-black/60 overflow-hidden`}
             style={
-                sidebarMode
-                    ? { position: 'fixed', zIndex: 9999, ...panelStyle }
-                    : { position: 'absolute', right: 0, top: 'calc(100% + 12px)', zIndex: 50 }
+                bottomNavMode
+                    ? { position: 'fixed', bottom: '4.5rem', left: '0.5rem', right: '0.5rem', zIndex: 9999 }
+                    : sidebarMode
+                        ? { position: 'fixed', zIndex: 9999, ...panelStyle }
+                        : { position: 'absolute', right: 0, top: 'calc(100% + 12px)', zIndex: 50 }
             }
         >
             {/* Cabeçalho */}
@@ -221,6 +226,33 @@ export default function NotificationBell({
             )}
         </div>
     );
+
+    // ── Modo bottom nav (mobile) — item de nav com painel que abre para cima ───
+    if (bottomNavMode) {
+        return (
+            <>
+                <button
+                    ref={buttonRef}
+                    onClick={() => setIsOpen(v => !v)}
+                    className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 transition-colors ${
+                        isOpen ? 'text-primary' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                >
+                    <div className="relative">
+                        <Bell size={20} />
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                            </span>
+                        )}
+                    </div>
+                    <span className="text-[10px] font-medium">Alertas</span>
+                </button>
+                {isOpen && mounted && createPortal(panel, document.body)}
+            </>
+        );
+    }
 
     // ── Modo sidebar: linha inteira clicável, alinhada com os NavItems ────────
     if (sidebarMode) {

@@ -42,10 +42,13 @@ const nextConfig: NextConfig = {
     poweredByHeader: false, // Esconde header "X-Powered-By: Next.js"
     reactStrictMode: true,
 
-    // Permite Server Actions via túnel Cloudflare (teste externo)
+    // Permite Server Actions via túnel Cloudflare (demo externa)
+    // Defina TUNNEL_ORIGIN=https://xxxx.trycloudflare.com no .env antes de rodar
     experimental: {
         serverActions: {
-            allowedOrigins: ['*.trycloudflare.com'],
+            allowedOrigins: process.env.TUNNEL_ORIGIN
+                ? [process.env.TUNNEL_ORIGIN.replace(/^https?:\/\//, '')]
+                : [],
         },
     },
 

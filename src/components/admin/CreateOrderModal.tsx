@@ -60,14 +60,6 @@ const EMPTY_NEW_CLIENT: NewClientForm = {
     zip: '', street: '', number: '', neighborhood: '', city: '', state: '',
 };
 
-const FINISHING_BY_CATEGORY: Record<string, string[]> = {
-    'LONA':     ['Sem acabamento', 'Bainha + Ilhós', 'Bainha simples', 'Ilhós', 'Madeira (vara)', 'Solda'],
-    'ACM':      ['Sem acabamento', 'Refile', 'Aplicação'],
-    'ACRÍLICO': ['Sem acabamento', 'Refile'],
-    'ADESIVO':  ['Sem acabamento', 'Aplicação', 'Refile'],
-    'PVC':      ['Sem acabamento', 'Refile'],
-    'PS':       ['Sem acabamento', 'Refile'],
-};
 const DEFAULT_FINISHINGS = ['Sem acabamento'];
 
 const VINYL_TYPES = ['Fosco', 'Brilhoso', 'Transparente'];
@@ -232,12 +224,14 @@ export default function CreateOrderModal({ isOpen, mode = 'modal', onClose, onSu
 
     const relevantFinishings = useMemo(() => {
         if (!selectedProduct) return DEFAULT_FINISHINGS;
-        return FINISHING_BY_CATEGORY[selectedProduct.category] ?? DEFAULT_FINISHINGS;
+        const cfg = (selectedProduct.pricingConfig ?? {}) as { finishings?: string[] };
+        return cfg.finishings?.length ? cfg.finishings : DEFAULT_FINISHINGS;
     }, [selectedProduct]);
 
     useEffect(() => {
         if (!selectedProduct) return;
-        const finishings = FINISHING_BY_CATEGORY[selectedProduct.category] ?? DEFAULT_FINISHINGS;
+        const cfg = (selectedProduct.pricingConfig ?? {}) as { finishings?: string[] };
+        const finishings = cfg.finishings?.length ? cfg.finishings : DEFAULT_FINISHINGS;
         setCurrentFinishing(finishings[0]);
         setCurrentThickness('');
         setCurrentVinylType('');

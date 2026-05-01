@@ -86,28 +86,25 @@ export async function getDashboardData(): Promise<DashboardStats> {
         }),
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    type AnyOrder = any;
-
     const byStatus = {
-        PENDING:            activeOrders.filter((o: AnyOrder) => o.status === 'PENDING').length,
-        IN_PRODUCTION:      activeOrders.filter((o: AnyOrder) => o.status === 'IN_PRODUCTION').length,
-        FINISHING:          activeOrders.filter((o: AnyOrder) => o.status === 'FINISHING').length,
-        READY_FOR_SHIPPING: activeOrders.filter((o: AnyOrder) => o.status === 'READY_FOR_SHIPPING').length,
+        PENDING:            activeOrders.filter(o => o.status === 'PENDING').length,
+        IN_PRODUCTION:      activeOrders.filter(o => o.status === 'IN_PRODUCTION').length,
+        FINISHING:          activeOrders.filter(o => o.status === 'FINISHING').length,
+        READY_FOR_SHIPPING: activeOrders.filter(o => o.status === 'READY_FOR_SHIPPING').length,
     };
 
-    const monthRevenue    = completedThisMonth.reduce((s: number, o: AnyOrder) => s + o.totalPrice, 0);
+    const monthRevenue    = completedThisMonth.reduce((s, o) => s + o.totalPrice, 0);
     const ordersThisMonth = ordersThisMonthData.length;
     const avgTicketMonth  = ordersThisMonth > 0
-        ? ordersThisMonthData.reduce((s: number, o: AnyOrder) => s + o.totalPrice, 0) / ordersThisMonth
+        ? ordersThisMonthData.reduce((s, o) => s + o.totalPrice, 0) / ordersThisMonth
         : 0;
 
     const alertOrders = activeOrders
-        .filter((o: AnyOrder) => o.deliveryDate && new Date(o.deliveryDate) <= endOfToday)
-        .map((o: AnyOrder) => ({
+        .filter(o => o.deliveryDate && new Date(o.deliveryDate) <= endOfToday)
+        .map(o => ({
             id:           o.id,
             clientName:   o.clientName,
-            deliveryDate: o.deliveryDate.toISOString(),
+            deliveryDate: o.deliveryDate!.toISOString(),
             status:       o.status,
         }));
 
@@ -143,7 +140,7 @@ export async function getDashboardData(): Promise<DashboardStats> {
         overdueCount: alertOrders.length,
         byStatus,
         isAdmin: session.role === 'admin',
-        recentOrders: recentOrders.map((o: AnyOrder) => ({
+        recentOrders: recentOrders.map(o => ({
             id:           o.id,
             clientName:   o.clientName,
             status:       o.status,

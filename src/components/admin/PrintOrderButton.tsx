@@ -49,29 +49,34 @@ export default function PrintOrderButton({ order }: PrintOrderButtonProps) {
                 .join(' · ');
 
             return `
-            <tr class="${idx % 2 === 0 ? 'row-even' : 'row-odd'}">
-                <td class="col-qty">${item.quantity}</td>
-                <td class="col-desc">
+            <tr style="background:${idx % 2 === 0 ? '#ffffff' : '#f5f5f5'}">
+                <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #e0e0e0;vertical-align:top">${item.quantity}</td>
+                <td style="padding:5px 8px;border-bottom:1px solid #e0e0e0;vertical-align:top">
                     <strong>${item.productName ?? item.material ?? '—'}</strong>
-                    ${extras ? `<br><span class="item-extra">${extras}</span>` : ''}
-                    ${item.serviceType ? `<br><span class="item-extra">Tipo: ${item.serviceType}</span>` : ''}
+                    ${extras ? `<br><span style="font-size:9px;color:#666">${extras}</span>` : ''}
+                    ${item.serviceType ? `<br><span style="font-size:9px;color:#666">Tipo: ${item.serviceType}</span>` : ''}
                 </td>
-                <td class="col-dims">${dims}</td>
-                <td class="col-unit">${fmtBRL(item.unitPrice)}</td>
-                <td class="col-total">${fmtBRL(item.totalPrice)}</td>
+                <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #e0e0e0;vertical-align:top;white-space:nowrap">${dims}</td>
+                <td style="text-align:right;padding:5px 8px;border-bottom:1px solid #e0e0e0;vertical-align:top;white-space:nowrap">${fmtBRL(item.unitPrice)}</td>
+                <td style="text-align:right;padding:5px 8px;border-bottom:1px solid #e0e0e0;vertical-align:top;font-weight:700;white-space:nowrap">${fmtBRL(item.totalPrice)}</td>
             </tr>`;
         }).join('');
 
         const finRows = [
-            { label: 'Subtotal produtos', value: subtotal,     show: true         },
-            { label: 'Mão de obra / Serviços', value: serviceValue, show: serviceValue > 0 },
-            { label: 'Frete / Deslocamento',   value: shipping,     show: shipping     > 0 },
-            { label: 'Desconto',               value: -discount,    show: discount     > 0 },
+            { label: 'Subtotal produtos',      value: subtotal,      show: true              },
+            { label: 'Mão de obra / Serviços', value: serviceValue,  show: serviceValue > 0  },
+            { label: 'Frete / Deslocamento',   value: shipping,      show: shipping > 0      },
+            { label: 'Desconto',               value: -discount,     show: discount > 0      },
         ].filter(r => r.show).map(r => `
             <tr>
-                <td class="fin-label">${r.label}</td>
-                <td class="fin-value">${fmtBRL(Math.abs(r.value))}${r.value < 0 ? ' (−)' : ''}</td>
+                <td style="padding:3px 4px;font-size:9.5px;color:#555">${r.label}</td>
+                <td style="padding:3px 4px;font-size:10px;text-align:right;font-family:'Courier New',monospace">${r.value < 0 ? '(−) ' : ''}${fmtBRL(Math.abs(r.value))}</td>
             </tr>`).join('');
+
+        const addressLine = order.clientStreet
+            ? [order.clientStreet, order.clientNumber, order.clientNeighborhood].filter(Boolean).join(', ')
+              + (order.clientZip ? ` — CEP ${order.clientZip}` : '')
+            : '';
 
         const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -81,301 +86,263 @@ export default function PrintOrderButton({ order }: PrintOrderButtonProps) {
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm;
+  }
+
   body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 11px;
     color: #111;
     background: #fff;
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 16px 24px 24px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
+
+  /* Evita corte no meio de blocos entre páginas */
+  .no-break { page-break-inside: avoid; break-inside: avoid; }
 
   /* ── Cabeçalho ── */
   .header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding-bottom: 10px;
+    width: 100%;
+    border-collapse: collapse;
     border-bottom: 2.5px solid #000;
-    gap: 16px;
+    margin-bottom: 8px;
   }
+  .header td { padding-bottom: 8px; vertical-align: top; }
   .company-name {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     line-height: 1.1;
   }
   .company-tagline {
     font-size: 9px;
     letter-spacing: 1px;
-    color: #555;
+    color: #666;
     margin-top: 2px;
     text-transform: uppercase;
   }
-  .company-info {
-    font-size: 10px;
-    line-height: 1.75;
-    margin-top: 6px;
-    color: #333;
-  }
-  .header-right {
-    text-align: right;
-    flex-shrink: 0;
-  }
-  .header-phone {
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-  }
-  .header-cnpj {
-    font-size: 10px;
-    color: #555;
-    margin-top: 3px;
-  }
+  .company-info { font-size: 10px; line-height: 1.7; margin-top: 5px; color: #444; }
+  .header-phone { font-size: 14px; font-weight: 800; letter-spacing: 0.5px; text-align: right; }
+  .header-cnpj  { font-size: 10px; color: #666; margin-top: 3px; text-align: right; }
 
-  /* ── Título OS ── */
+  /* ── Barra OS ── */
   .os-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #000;
+    width: 100%;
+    border-collapse: collapse;
+    background: #111;
     color: #fff;
-    padding: 7px 14px;
-    margin: 10px 0 8px;
-    border-radius: 3px;
+    margin-bottom: 8px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .os-title {
-    font-size: 14px;
-    font-weight: 900;
-    letter-spacing: 0.8px;
-  }
-  .os-meta {
-    font-size: 10px;
-    opacity: 0.8;
-    text-align: right;
-    line-height: 1.7;
-  }
+  .os-bar td { padding: 7px 12px; }
+  .os-title { font-size: 13px; font-weight: 900; letter-spacing: 0.8px; }
+  .os-meta  { font-size: 10px; opacity: 0.85; text-align: right; line-height: 1.7; }
 
-  /* ── Cliente ── */
+  /* ── Rótulo de seção ── */
   .section-label {
     font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: #555;
-    margin-bottom: 5px;
+    letter-spacing: 1px;
+    color: #666;
     padding-bottom: 3px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 6px;
   }
-  .client-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
+
+  /* ── Tabela de cliente ── */
+  .client-table {
+    width: 100%;
+    border-collapse: collapse;
     border: 1px solid #bbb;
-    border-radius: 3px;
     margin-bottom: 10px;
     font-size: 10.5px;
   }
-  .client-cell {
-    padding: 5px 10px;
-    border-right: 1px solid #ddd;
-    border-bottom: 1px solid #ddd;
-    line-height: 1.6;
+  .client-table td {
+    padding: 5px 9px;
+    border: 1px solid #ddd;
+    vertical-align: top;
+    line-height: 1.5;
   }
-  .client-cell:nth-child(even) { border-right: none; }
-  .client-cell:nth-last-child(-n+2) { border-bottom: none; }
-  .client-cell.full { grid-column: 1 / -1; border-right: none; }
-  .cell-label { font-size: 9px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 1px; }
+  .cell-label {
+    font-size: 8.5px;
+    color: #888;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 1px;
+  }
   .cell-value { font-weight: 600; color: #111; }
 
-  /* ── Itens ── */
+  /* ── Tabela de itens ── */
   .items-table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 8px;
     font-size: 10.5px;
   }
-  .items-table thead tr {
+  .items-table thead td {
     background: #222;
     color: #fff;
-  }
-  .items-table thead th {
     padding: 6px 8px;
-    text-align: left;
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.7px;
     text-transform: uppercase;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .col-qty   { width: 42px;  text-align: center; }
-  .col-dims  { width: 100px; text-align: center; }
-  .col-unit  { width: 90px;  text-align: right;  }
-  .col-total { width: 90px;  text-align: right;  font-weight: 700; }
-  .col-desc  { }
-
-  .items-table tbody td {
-    padding: 6px 8px;
-    vertical-align: top;
-    border-bottom: 1px solid #e8e8e8;
-  }
-  .row-even td { background: #fff; }
-  .row-odd  td { background: #f8f8f8; }
-  .item-extra { font-size: 9.5px; color: #666; font-weight: 400; }
-
   .items-table tfoot td {
     border-top: 2px solid #000;
     padding: 4px 8px;
     font-size: 9px;
-    color: #666;
+    color: #777;
     font-style: italic;
   }
 
   /* ── Notas ── */
   .notes-box {
-    border: 1px dashed #ccc;
-    border-radius: 3px;
+    border: 1px dashed #bbb;
     padding: 6px 10px;
     font-size: 10px;
     color: #444;
     margin-bottom: 10px;
     line-height: 1.6;
   }
-  .notes-box .notes-label { font-weight: 700; font-size: 9px; text-transform: uppercase; color: #888; margin-bottom: 2px; }
 
   /* ── Garantia ── */
   .guarantee {
     text-align: center;
     font-size: 9.5px;
-    color: #555;
+    color: #666;
     font-style: italic;
-    border-top: 1px dashed #ccc;
-    border-bottom: 1px dashed #ccc;
+    border-top: 1px dashed #bbb;
+    border-bottom: 1px dashed #bbb;
     padding: 4px 0;
     margin-bottom: 10px;
   }
 
-  /* ── Footer ── */
-  .footer-grid {
-    display: grid;
-    grid-template-columns: 1fr 240px;
-    gap: 12px;
+  /* ── Rodapé (tabela para compatibilidade de impressão) ── */
+  .footer-table {
+    width: 100%;
+    border-collapse: collapse;
     border: 1px solid #bbb;
-    border-radius: 3px;
-    padding: 10px 12px;
     margin-bottom: 8px;
     font-size: 10.5px;
   }
-  .footer-left { line-height: 2.0; }
-  .footer-cell-label { font-size: 9px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .footer-table td { padding: 7px 10px; vertical-align: top; }
+  .footer-table .footer-left { border-right: 1px solid #ddd; line-height: 2.0; width: 60%; }
+  .footer-cell-label { font-size: 9px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
 
   /* Tabela financeira */
   .fin-table { width: 100%; border-collapse: collapse; }
-  .fin-table td { padding: 3px 4px; font-size: 10px; vertical-align: middle; }
-  .fin-label { color: #555; font-size: 9.5px; }
-  .fin-value { text-align: right; font-family: 'Courier New', monospace; font-size: 10.5px; }
-  .fin-total td {
-    border-top: 2px solid #000 !important;
-    padding-top: 5px !important;
-    font-weight: 900;
-    font-size: 12px;
-  }
-  .fin-total .fin-value { font-size: 13px; }
-  .fin-sep td { border-top: 1px solid #ddd; }
+  .fin-table td { padding: 3px 2px; }
+  .fin-section-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #666; padding-bottom: 3px; border-bottom: 1px solid #ccc; margin-bottom: 4px; display: block; }
+  .fin-total-row td { border-top: 2px solid #000; padding-top: 5px; font-weight: 900; font-size: 12px; }
+  .fin-total-row .fin-val { font-size: 13px; }
+  .fin-sep td { border-top: 1px solid #ddd; padding: 1px 0; }
 
-  /* ── Bottom bar ── */
-  .bottom-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    border-top: 1px solid #000;
+  /* ── Barra inferior ── */
+  .bottom-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 1px solid #333;
     padding-top: 6px;
     font-size: 9px;
-    color: #555;
+    color: #666;
+    margin-top: 2px;
   }
-  .signature {
-    text-align: center;
-    font-size: 10px;
-  }
-  .signature-line { border-top: 1px solid #000; width: 160px; margin: 20px auto 3px; }
-
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { margin: 10mm 14mm; }
-  }
+  .bottom-table td { padding-top: 6px; vertical-align: bottom; }
+  .signature { text-align: center; font-size: 10px; }
+  .signature-line { border-top: 1px solid #000; width: 160px; margin: 24px auto 3px; }
 </style>
 </head>
 <body>
 
 <!-- ── CABEÇALHO ── -->
-<div class="header">
-  <div>
-    <div class="company-name">${settings.companyName || 'DruSign'}</div>
-    <div class="company-tagline">Comunicação Visual &amp; Serviços Gráficos</div>
-    <div class="company-info">
-      ${settings.companyAddress ? `${settings.companyAddress}<br>` : ''}
-      ${[settings.companyEmail, settings.companyPhone].filter(Boolean).join('  ·  ')}
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="header-phone">${settings.companyPhone || ''}</div>
-    ${settings.companyCnpj ? `<div class="header-cnpj">CNPJ: ${settings.companyCnpj}</div>` : ''}
-  </div>
-</div>
+<table class="header no-break">
+  <tr>
+    <td>
+      <div class="company-name">${settings.companyName || 'DruSign'}</div>
+      <div class="company-tagline">Comunicação Visual &amp; Serviços Gráficos</div>
+      <div class="company-info">
+        ${settings.companyAddress ? `${settings.companyAddress}<br>` : ''}
+        ${[settings.companyEmail, settings.companyPhone].filter(Boolean).join('  ·  ')}
+      </div>
+    </td>
+    <td style="text-align:right;width:220px">
+      <div class="header-phone">${settings.companyPhone || ''}</div>
+      ${settings.companyCnpj ? `<div class="header-cnpj">CNPJ: ${settings.companyCnpj}</div>` : ''}
+    </td>
+  </tr>
+</table>
 
-<!-- ── TÍTULO OS ── -->
-<div class="os-bar">
-  <div class="os-title">ORDEM DE SERVIÇO Nº ${osNum}</div>
-  <div class="os-meta">
-    Data: ${date} &nbsp;|&nbsp; Hora: ${hour}
-  </div>
-</div>
+<!-- ── BARRA OS ── -->
+<table class="os-bar no-break">
+  <tr>
+    <td class="os-title">ORDEM DE SERVIÇO Nº ${osNum}</td>
+    <td class="os-meta">Data: ${date}&nbsp; | &nbsp;Hora: ${hour}</td>
+  </tr>
+</table>
 
 <!-- ── CLIENTE ── -->
-<div class="section-label">Dados do Cliente</div>
-<div class="client-grid">
-  <div class="client-cell full">
-    <span class="cell-label">Razão Social / Nome</span>
-    <span class="cell-value" style="font-size:12px">${order.clientName}</span>
-  </div>
-  <div class="client-cell">
-    <span class="cell-label">CPF / CNPJ</span>
-    <span class="cell-value">${order.clientDocument || '—'}</span>
-  </div>
-  <div class="client-cell">
-    <span class="cell-label">Inscrição Estadual</span>
-    <span class="cell-value">${order.clientIe || '—'}</span>
-  </div>
-  <div class="client-cell">
-    <span class="cell-label">Telefone</span>
-    <span class="cell-value">${order.clientPhone || '—'}</span>
-  </div>
-  <div class="client-cell">
-    <span class="cell-label">Cidade / UF</span>
-    <span class="cell-value">${[order.clientCity, order.clientState].filter(Boolean).join(' / ') || '—'}</span>
-  </div>
-  ${order.clientStreet ? `
-  <div class="client-cell full">
-    <span class="cell-label">Endereço de Entrega</span>
-    <span class="cell-value">${order.clientStreet}${order.clientNumber ? ', ' + order.clientNumber : ''}${order.clientNeighborhood ? ' — ' + order.clientNeighborhood : ''}${order.clientZip ? ' — CEP ' + order.clientZip : ''}</span>
-  </div>` : ''}
-</div>
+<div class="section-label no-break">Dados do Cliente</div>
+<table class="client-table no-break">
+  <tr>
+    <td colspan="2">
+      <span class="cell-label">Razão Social / Nome</span>
+      <span class="cell-value" style="font-size:12px">${order.clientName}</span>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <span class="cell-label">CPF / CNPJ</span>
+      <span class="cell-value">${order.clientDocument || '—'}</span>
+    </td>
+    <td>
+      <span class="cell-label">Inscrição Estadual</span>
+      <span class="cell-value">${order.clientIe || '—'}</span>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <span class="cell-label">Telefone</span>
+      <span class="cell-value">${order.clientPhone || '—'}</span>
+    </td>
+    <td>
+      <span class="cell-label">Cidade / UF</span>
+      <span class="cell-value">${[order.clientCity, order.clientState].filter(Boolean).join(' / ') || '—'}</span>
+    </td>
+  </tr>
+  ${addressLine ? `
+  <tr>
+    <td colspan="2">
+      <span class="cell-label">Endereço de Entrega</span>
+      <span class="cell-value">${addressLine}</span>
+    </td>
+  </tr>` : ''}
+</table>
 
 <!-- ── ITENS ── -->
 <div class="section-label">Itens da Ordem de Serviço</div>
 <table class="items-table">
   <thead>
     <tr>
-      <th class="col-qty">Qtd</th>
-      <th class="col-desc">Produto / Descrição</th>
-      <th class="col-dims">Dimensões</th>
-      <th class="col-unit">Valor Unit.</th>
-      <th class="col-total">Total</th>
+      <td style="width:42px;text-align:center">Qtd</td>
+      <td>Produto / Descrição</td>
+      <td style="width:100px;text-align:center">Dimensões</td>
+      <td style="width:90px;text-align:right">Valor Unit.</td>
+      <td style="width:95px;text-align:right">Total</td>
     </tr>
   </thead>
   <tbody>
-    ${itemsRows || `<tr class="row-even"><td colspan="5" style="text-align:center;padding:16px;color:#aaa;">Nenhum item</td></tr>`}
+    ${itemsRows || `<tr><td colspan="5" style="text-align:center;padding:16px;color:#aaa">Nenhum item cadastrado</td></tr>`}
   </tbody>
   ${order.items && order.items.length > 0 ? `
   <tfoot>
@@ -385,57 +352,78 @@ export default function PrintOrderButton({ order }: PrintOrderButtonProps) {
 
 <!-- ── OBSERVAÇÕES ── -->
 ${order.notes ? `
-<div class="notes-box">
-  <div class="notes-label">Observações</div>
+<div class="notes-box no-break">
+  <div style="font-weight:700;font-size:9px;text-transform:uppercase;color:#888;margin-bottom:2px">Observações</div>
   ${order.notes}
 </div>` : ''}
 
 <!-- ── GARANTIA ── -->
-<div class="guarantee">
+<div class="guarantee no-break">
   ★ &nbsp; Guarde este documento como comprovante do seu serviço &nbsp; ★
 </div>
 
-<!-- ── FOOTER ── -->
-<div class="footer-grid">
-  <div class="footer-left">
-    <div><span class="footer-cell-label">Forma de Entrega:</span>&nbsp; ${order.deliveryMethod || '—'}</div>
-    <div><span class="footer-cell-label">Cond. de Pagamento:</span>&nbsp; ${order.paymentTerms || '—'}</div>
-    <div><span class="footer-cell-label">Data Aprovação:</span>&nbsp; ${fmtDate(order.approvalDate)}</div>
-    <div><span class="footer-cell-label">Prazo de Entrega:</span>&nbsp; ${fmtDate(order.deliveryDate)}</div>
-  </div>
-  <div>
-    <div class="section-label" style="margin-bottom:6px">Resumo Financeiro</div>
-    <table class="fin-table">
-      ${finRows}
-      <tr class="fin-sep"><td colspan="2"></td></tr>
-      <tr class="fin-total">
-        <td class="fin-label">TOTAL</td>
-        <td class="fin-value">${fmtBRL(total)}</td>
-      </tr>
-    </table>
-  </div>
-</div>
+<!-- ── RODAPÉ ── -->
+<table class="footer-table no-break">
+  <tr>
+    <td class="footer-left">
+      <div><span class="footer-cell-label">Forma de Entrega:</span>&nbsp; ${order.deliveryMethod || '—'}</div>
+      <div><span class="footer-cell-label">Cond. de Pagamento:</span>&nbsp; ${order.paymentTerms || '—'}</div>
+      <div><span class="footer-cell-label">Data Aprovação:</span>&nbsp; ${fmtDate(order.approvalDate)}</div>
+      <div><span class="footer-cell-label">Prazo de Entrega:</span>&nbsp; ${fmtDate(order.deliveryDate)}</div>
+    </td>
+    <td style="width:40%">
+      <span class="fin-section-label">Resumo Financeiro</span>
+      <table class="fin-table">
+        ${finRows}
+        <tr class="fin-sep"><td colspan="2">&nbsp;</td></tr>
+        <tr class="fin-total-row">
+          <td>TOTAL</td>
+          <td class="fin-val" style="text-align:right;font-family:'Courier New',monospace">${fmtBRL(total)}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
 <!-- ── ASSINATURA ── -->
-<div class="bottom-bar">
-  <div>
-    <div>Impressão em 1ª via &nbsp;·&nbsp; Obrigado pela preferência!</div>
-    <div style="margin-top:2px; font-size:8px; color:#aaa;">OS #${osNum} &nbsp;|&nbsp; Gerado em ${date} às ${hour}</div>
-  </div>
-  <div class="signature">
-    <div class="signature-line"></div>
-    <div>Assinatura do Cliente</div>
-  </div>
-</div>
+<table class="bottom-table no-break">
+  <tr>
+    <td>
+      <div>Impressão em 1ª via &nbsp;·&nbsp; Obrigado pela preferência!</div>
+      <div style="margin-top:2px;font-size:8px;color:#aaa">OS #${osNum} &nbsp;|&nbsp; Gerado em ${date} às ${hour}</div>
+    </td>
+    <td style="text-align:right">
+      <div class="signature">
+        <div class="signature-line"></div>
+        <div>Assinatura do Cliente</div>
+      </div>
+    </td>
+  </tr>
+</table>
 
-<script>window.print();</script>
 </body>
 </html>`;
 
         const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
         const blobUrl = URL.createObjectURL(blob);
         printWindow.location.href = blobUrl;
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 15_000);
+
+        // Aguarda o carregamento e então abre o diálogo de impressão
+        printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+        };
+        // Fallback se onload não disparar (alguns navegadores)
+        setTimeout(() => {
+            try {
+                if (!printWindow.closed) {
+                    printWindow.focus();
+                    printWindow.print();
+                }
+            } catch { /* janela já fechada */ }
+            URL.revokeObjectURL(blobUrl);
+        }, 2_500);
     }
 
     return (

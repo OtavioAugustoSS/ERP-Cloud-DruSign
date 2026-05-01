@@ -42,6 +42,9 @@ export default function Settings() {
     const [isCreatingCategory, setIsCreatingCategory] = useState(false);
     const [isSavingNew, setIsSavingNew] = useState(false);
 
+    // Finishing inline input state: productId -> draft value
+    const [finishingDraft, setFinishingDraft] = useState<Record<string, string>>({});
+
     // Add Variant Modal State
     const [variantProductId, setVariantProductId] = useState('');
     const [variantType, setVariantType] = useState<'thickness' | 'subtype'>('thickness');
@@ -200,6 +203,25 @@ export default function Settings() {
             setVariantProductId(''); setVariantName(''); setVariantPrice('');
         }
         setIsSavingNew(false);
+    };
+
+    const handleAddFinishing = async (product: Product, name: string) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const newConfig = { ...(product.pricingConfig ?? {}) } as FlexPricingConfig;
+        const current = newConfig.finishings ?? [];
+        if (current.includes(trimmed)) return;
+        newConfig.finishings = [...current, trimmed];
+        const result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
+        if (result.success && result.product) setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
+    };
+
+    const handleDeleteFinishing = async (product: Product, finishing: string) => {
+        setConfirmDelete(null);
+        const newConfig = { ...(product.pricingConfig ?? {}) } as FlexPricingConfig;
+        newConfig.finishings = (newConfig.finishings ?? []).filter(f => f !== finishing);
+        const result = await updateProductPricing(product.id, product.pricePerM2, newConfig);
+        if (result.success && result.product) setProducts(prev => prev.map(p => p.id === product.id ? result.product! : p));
     };
 
     const handleDeleteVariant = async (product: Product, type: 'thickness' | 'subtype', variantKey: string) => {
@@ -614,6 +636,60 @@ export default function Settings() {
                                                                     </td>
                                                                 </tr>
                                                             )}
+
+                                                            {/* ── Acabamentos ── */}
+                                                            {(() => {
+                                                                const finishings = (cfg.finishings ?? []) as string[];
+                                                                const draft = finishingDraft[product.id] ?? '';
+                                                                return (
+                                                                    <tr>
+                                                                        <td colSpan={3} className="px-6 py-3 border-t border-white/[0.04] bg-black/10">
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <Icons.Settings size={11} className="text-slate-500" />
+                                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Acabamentos</span>
+                                                                            </div>
+                                                                            <div className="flex flex-wrap gap-1.5 mb-2">
+                                                                                {finishings.map(f => {
+                                                                                    const delKey = `finishing:${product.id}:${f}`;
+                                                                                    const confirming = confirmDelete === delKey;
+                                                                                    return (
+                                                                                        <span key={f} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border bg-white/5 border-white/10 text-slate-300">
+                                                                                            {f}
+                                                                                            {confirming ? (
+                                                                                                <>
+                                                                                                    <button onClick={() => handleDeleteFinishing(product, f)} className="text-red-400 hover:text-red-300 font-bold ml-1 text-[10px]">confirmar</button>
+                                                                                                    <button onClick={() => setConfirmDelete(null)} className="text-slate-500 hover:text-slate-300 ml-0.5"><Icons.X size={10} /></button>
+                                                                                                </>
+                                                                                            ) : (
+                                                                                                <button onClick={() => setConfirmDelete(delKey)} className="text-slate-600 hover:text-red-400 transition-colors ml-0.5"><Icons.X size={10} /></button>
+                                                                                            )}
+                                                                                        </span>
+                                                                                    );
+                                                                                })}
+                                                                                {finishings.length === 0 && (
+                                                                                    <span className="text-xs text-slate-600 italic">Nenhum acabamento cadastrado</span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <input
+                                                                                    value={draft}
+                                                                                    onChange={e => setFinishingDraft(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                                                                    onKeyDown={e => { if (e.key === 'Enter' && draft.trim()) { handleAddFinishing(product, draft); setFinishingDraft(prev => ({ ...prev, [product.id]: '' })); } }}
+                                                                                    placeholder="Novo acabamento..."
+                                                                                    className="flex-1 max-w-[200px] bg-black/40 border border-white/10 rounded-lg h-7 px-2.5 text-xs text-white outline-none focus:border-primary transition-colors placeholder:text-slate-700"
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => { if (draft.trim()) { handleAddFinishing(product, draft); setFinishingDraft(prev => ({ ...prev, [product.id]: '' })); } }}
+                                                                                    disabled={!draft.trim()}
+                                                                                    className="h-7 px-2.5 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+                                                                                >
+                                                                                    <Icons.Plus size={11} /> Adicionar
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })()}
 
                                                         </React.Fragment>
                                                     );

@@ -88,13 +88,13 @@ export default function History() {
         <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-dark">
 
             {/* ── HEADER ── */}
-            <header className="flex-none px-8 py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
+            <header className="flex-none px-4 sm:px-8 py-4 sm:py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
 
-                {/* Linha 1 — Título + NotificationBell */}
+                {/* Linha 1 — Título */}
                 <div className="flex items-center justify-between gap-4 animate-fade-in-up">
                     <div>
-                        <h2 className="text-white text-2xl font-bold leading-tight tracking-tight">Histórico de Pedidos</h2>
-                        <p className="text-slate-500 text-xs mt-0.5">Pedidos finalizados e cancelados do sistema.</p>
+                        <h2 className="text-white text-xl sm:text-2xl font-bold leading-tight tracking-tight">Histórico de Pedidos</h2>
+                        <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">Pedidos finalizados e cancelados do sistema.</p>
                     </div>
                 </div>
 
@@ -115,7 +115,7 @@ export default function History() {
                 </div>
 
                 {/* ── FILTROS ── */}
-                <div className="mt-4 flex flex-col xl:flex-row gap-3 animate-fade-in-up animate-delay-150">
+                <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in-up animate-delay-150">
 
                     {/* Busca */}
                     <div className="flex-1 min-w-[280px]">
@@ -171,7 +171,7 @@ export default function History() {
             </header>
 
             {/* ── TABELA ── */}
-            <div className="flex-1 overflow-auto p-6 pt-4">
+            <div className="flex-1 overflow-auto p-4 sm:p-6 pt-4">
                 <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl animate-fade-in-up animate-delay-200">
                     {loading ? (
                         <div className="p-12 flex justify-center">
@@ -191,112 +191,143 @@ export default function History() {
                             )}
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/10 bg-black/20 text-slate-500 text-[11px] uppercase tracking-widest font-semibold">
-                                    <th className="p-3 pl-6 w-32">OS #</th>
-                                    <th className="p-3">Cliente</th>
-                                    <th className="p-3">Material / Detalhes</th>
-                                    <th className="p-3 w-36">Prazo</th>
-                                    <th className="p-3 w-36 text-center">Status</th>
-                                    <th className="p-3 w-36 text-right">Valor</th>
-                                    <th className="p-3 pr-6 w-20 text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/[0.04] text-sm">
+                        <>
+                            {/* Mobile: lista de cards */}
+                            <div className="sm:hidden divide-y divide-white/[0.04]">
                                 {filteredOrders.map(order => {
                                     const isCancelled = order.status === OrderStatus.CANCELLED;
                                     const itemCount = order.items?.length ?? 0;
-                                    const accentClass = isCancelled ? 'border-l-red-500/20' : 'border-l-green-500/40';
+                                    const productLabel = itemCount > 1
+                                        ? `${itemCount} itens`
+                                        : order.productName ?? order.items?.[0]?.productName ?? order.items?.[0]?.material ?? 'Produto';
                                     return (
-                                        <tr
+                                        <div
                                             key={order.id}
                                             onClick={() => router.push(`/admin/orders/${order.id}?from=history`)}
-                                            className={`transition-all group cursor-pointer border-l-2 ${accentClass} ${isCancelled ? 'opacity-40' : 'hover:bg-white/[0.04]'}`}
+                                            className={`flex items-start gap-3 p-4 cursor-pointer transition-colors border-l-2 ${
+                                                isCancelled
+                                                    ? 'opacity-50 border-l-red-500/30'
+                                                    : 'hover:bg-white/[0.04] border-l-green-500/40'
+                                            }`}
                                         >
-                                            {/* OS # */}
-                                            <td className="p-3 pl-6">
-                                                <span className="inline-flex items-center h-6 px-2 rounded-lg bg-white/[0.04] border border-white/[0.07] font-mono text-[10px] text-slate-400 tracking-wide select-all">
-                                                    #{order.id.slice(0, 8)}
-                                                </span>
-                                            </td>
-
-                                            {/* Cliente */}
-                                            <td className="p-3">
-                                                <p className="text-white font-medium text-sm leading-tight">{order.clientName}</p>
-                                                <p className="text-[10px] text-slate-600 mt-0.5 font-mono">
-                                                    {new Date(order.createdAt).toLocaleDateString('pt-BR')}
-                                                </p>
-                                            </td>
-
-                                            {/* Material / Detalhes */}
-                                            <td className="p-3 max-w-[280px]">
-                                                {itemCount > 1 ? (
-                                                    <>
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="text-white font-semibold text-sm">{itemCount} itens</p>
-                                                            <span className="inline-flex items-center h-4 px-1.5 rounded bg-white/[0.06] text-[9px] font-bold text-slate-500 uppercase tracking-wide">multi</span>
-                                                        </div>
-                                                        <p className="text-[10px] text-slate-600 truncate mt-0.5">
-                                                            {order.items.map(i => i.productName ?? i.material ?? '—').join(' · ')}
-                                                        </p>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <p className="text-white font-semibold text-sm truncate">
-                                                            {order.productName ?? order.items?.[0]?.productName ?? order.items?.[0]?.material ?? 'Produto Personalizado'}
-                                                        </p>
-                                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                                            {order.width && order.height && (
-                                                                <span className="text-[10px] text-slate-600 font-mono">{order.width}×{order.height}cm</span>
-                                                            )}
-                                                            {order.quantity && (
-                                                                <span className="text-[10px] text-slate-600">· {order.quantity} un</span>
-                                                            )}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </td>
-
-                                            {/* Prazo */}
-                                            <td className="p-3">
-                                                {order.deliveryDate ? (
-                                                    <span className="text-xs font-mono text-slate-400 tabular-nums">
-                                                        {new Date(order.deliveryDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-700 text-xs font-mono">—</span>
-                                                )}
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="p-3 text-center">
-                                                <StatusBadge status={order.status} />
-                                            </td>
-
-                                            {/* Valor */}
-                                            <td className="p-3 text-right">
-                                                <span className={`text-sm font-mono font-bold tabular-nums ${isCancelled ? 'line-through text-slate-600' : 'text-emerald-400'}`}>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <StatusBadge status={order.status} />
+                                                    <span className="text-[10px] font-mono text-slate-600">#{order.id.slice(0, 8)}</span>
+                                                </div>
+                                                <p className="text-white font-medium text-sm truncate">{order.clientName}</p>
+                                                <p className="text-[11px] text-slate-500 mt-0.5 truncate">{productLabel}</p>
+                                            </div>
+                                            <div className="shrink-0 text-right">
+                                                <p className={`text-sm font-mono font-bold tabular-nums ${isCancelled ? 'line-through text-slate-600' : 'text-emerald-400'}`}>
                                                     {formatCurrency(order.totalPrice)}
-                                                </span>
-                                            </td>
-
-                                            {/* Ações */}
-                                            <td className="p-3 pr-6 text-right">
-                                                <Link
-                                                    href={`/admin/orders/${order.id}?from=history`}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="inline-flex p-1.5 rounded-full hover:bg-white/10 text-slate-500 hover:text-white transition-colors"
-                                                    title="Ver detalhes"
-                                                >
-                                                    <Icons.Visibility size={16} />
-                                                </Link>
-                                            </td>
-                                        </tr>
+                                                </p>
+                                                {order.deliveryDate && (
+                                                    <p className="text-[10px] text-slate-600 font-mono mt-1">
+                                                        {new Date(order.deliveryDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </div>
+
+                            {/* Desktop: tabela */}
+                            <table className="hidden sm:table w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/10 bg-black/20 text-slate-500 text-[11px] uppercase tracking-widest font-semibold">
+                                        <th className="p-3 pl-6 w-32">OS #</th>
+                                        <th className="p-3">Cliente</th>
+                                        <th className="p-3">Material / Detalhes</th>
+                                        <th className="p-3 w-36">Prazo</th>
+                                        <th className="p-3 w-36 text-center">Status</th>
+                                        <th className="p-3 w-36 text-right">Valor</th>
+                                        <th className="p-3 pr-6 w-20 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/[0.04] text-sm">
+                                    {filteredOrders.map(order => {
+                                        const isCancelled = order.status === OrderStatus.CANCELLED;
+                                        const itemCount = order.items?.length ?? 0;
+                                        const accentClass = isCancelled ? 'border-l-red-500/20' : 'border-l-green-500/40';
+                                        return (
+                                            <tr
+                                                key={order.id}
+                                                onClick={() => router.push(`/admin/orders/${order.id}?from=history`)}
+                                                className={`transition-all group cursor-pointer border-l-2 ${accentClass} ${isCancelled ? 'opacity-40' : 'hover:bg-white/[0.04]'}`}
+                                            >
+                                                <td className="p-3 pl-6">
+                                                    <span className="inline-flex items-center h-6 px-2 rounded-lg bg-white/[0.04] border border-white/[0.07] font-mono text-[10px] text-slate-400 tracking-wide select-all">
+                                                        #{order.id.slice(0, 8)}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3">
+                                                    <p className="text-white font-medium text-sm leading-tight">{order.clientName}</p>
+                                                    <p className="text-[10px] text-slate-600 mt-0.5 font-mono">
+                                                        {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                                                    </p>
+                                                </td>
+                                                <td className="p-3 max-w-[280px]">
+                                                    {itemCount > 1 ? (
+                                                        <>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-white font-semibold text-sm">{itemCount} itens</p>
+                                                                <span className="inline-flex items-center h-4 px-1.5 rounded bg-white/[0.06] text-[9px] font-bold text-slate-500 uppercase tracking-wide">multi</span>
+                                                            </div>
+                                                            <p className="text-[10px] text-slate-600 truncate mt-0.5">
+                                                                {order.items.map(i => i.productName ?? i.material ?? '—').join(' · ')}
+                                                            </p>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-white font-semibold text-sm truncate">
+                                                                {order.productName ?? order.items?.[0]?.productName ?? order.items?.[0]?.material ?? 'Produto Personalizado'}
+                                                            </p>
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                {order.width && order.height && (
+                                                                    <span className="text-[10px] text-slate-600 font-mono">{order.width}×{order.height}cm</span>
+                                                                )}
+                                                                {order.quantity && (
+                                                                    <span className="text-[10px] text-slate-600">· {order.quantity} un</span>
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </td>
+                                                <td className="p-3">
+                                                    {order.deliveryDate ? (
+                                                        <span className="text-xs font-mono text-slate-400 tabular-nums">
+                                                            {new Date(order.deliveryDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-700 text-xs font-mono">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-center">
+                                                    <StatusBadge status={order.status} />
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <span className={`text-sm font-mono font-bold tabular-nums ${isCancelled ? 'line-through text-slate-600' : 'text-emerald-400'}`}>
+                                                        {formatCurrency(order.totalPrice)}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 pr-6 text-right">
+                                                    <Link
+                                                        href={`/admin/orders/${order.id}?from=history`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="inline-flex p-1.5 rounded-full hover:bg-white/10 text-slate-500 hover:text-white transition-colors"
+                                                        title="Ver detalhes"
+                                                    >
+                                                        <Icons.Visibility size={16} />
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </>
                     )}
                 </div>
 

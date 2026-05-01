@@ -16,7 +16,7 @@ function redirectToLogin(req: NextRequest, clearCookie = false): NextResponse {
 
 const ADMIN_ONLY_PATHS = ['/admin/settings', '/admin/users'];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
     const secret = process.env.JWT_SECRET;
     if (!secret || secret.length < 32) {
         return redirectToLogin(req, true);

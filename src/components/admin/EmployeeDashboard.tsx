@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
     Bell, BellOff, CheckCheck, Wrench, PackageCheck, Scissors,
     CheckCircle2, X, Clock, AlertTriangle, ChevronRight,
-    RefreshCw, Loader2, Package, Calendar, Check,
+    RefreshCw, Loader2, Package, Calendar,
     Factory, Layers,
 } from 'lucide-react';
 import { updateOrderStatus, getPendingOrders } from '@/actions/order';
@@ -117,6 +117,22 @@ export default function EmployeeDashboard({ initialOrders, initialNotifications,
     const [mobileTab, setMobileTab]         = useState<MobileTab>('servicos');
     const [now, setNow]                     = useState(new Date());
 
+    // Swipe horizontal entre abas (mobile)
+    const swipeStartX = useRef(0);
+    const swipeStartY = useRef(0);
+    const onSwipeStart = (e: React.TouchEvent) => {
+        swipeStartX.current = e.touches[0].clientX;
+        swipeStartY.current = e.touches[0].clientY;
+    };
+    const onSwipeEnd = (e: React.TouchEvent) => {
+        const dx = e.changedTouches[0].clientX - swipeStartX.current;
+        const dy = e.changedTouches[0].clientY - swipeStartY.current;
+        // Só atua se o swipe for predominantemente horizontal (evita conflito com scroll vertical)
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        if (dx < 0 && mobileTab === 'servicos')      setMobileTab('notificacoes');
+        if (dx > 0 && mobileTab === 'notificacoes')  setMobileTab('servicos');
+    };
+
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 60_000);
         return () => clearInterval(t);
@@ -214,26 +230,29 @@ export default function EmployeeDashboard({ initialOrders, initialNotifications,
                     </div>
                 </div>
 
-                {/* ── Filtros de status ── */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden animate-fade-in-up animate-delay-50">
+                {/* ── Filtros de status ── todos visíveis em uma linha no mobile ── */}
+                <div className="grid grid-cols-4 sm:flex sm:items-center gap-1.5 sm:gap-2 animate-fade-in-up animate-delay-50">
                     {([
-                        { key: 'ALL',              label: 'Todos',          count: orders.length,  Icon: Layers   },
-                        { key: 'IN_PRODUCTION',    label: 'Em Produção',    count: counts.prod,    Icon: Factory  },
-                        { key: 'FINISHING',        label: 'Acabamento',     count: counts.finish,  Icon: Scissors },
-                        { key: 'READY_FOR_SHIPPING', label: 'Prontos',      count: counts.ready,   Icon: PackageCheck },
-                    ] as const).map(({ key, label, count, Icon }) => (
+                        { key: 'ALL',                label: 'Todos',      shortLabel: 'Todos',  count: orders.length,  Icon: Layers      },
+                        { key: 'IN_PRODUCTION',      label: 'Em Produção',shortLabel: 'Prod.',  count: counts.prod,    Icon: Factory     },
+                        { key: 'FINISHING',          label: 'Acabamento', shortLabel: 'Acab.',  count: counts.finish,  Icon: Scissors    },
+                        { key: 'READY_FOR_SHIPPING', label: 'Prontos',    shortLabel: 'Pront.', count: counts.ready,   Icon: PackageCheck},
+                    ] as const).map(({ key, label, shortLabel, count, Icon }) => (
                         <button
                             key={key}
                             onClick={() => setStatusFilter(key)}
-                            className={`shrink-0 h-10 sm:h-8 px-3.5 sm:px-3 rounded-full text-sm sm:text-xs font-semibold transition-all border flex items-center gap-1.5 ${
+                            className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5
+                                py-2 sm:py-0 px-1 sm:px-3 h-auto sm:h-8 rounded-xl sm:rounded-full
+                                text-[10px] sm:text-xs font-semibold transition-all border ${
                                 statusFilter === key
                                     ? 'bg-primary/20 text-primary border-primary/30'
                                     : 'bg-white/5 text-slate-400 border-white/5 hover:border-white/10 hover:text-slate-200'
                             }`}
                         >
-                            <Icon size={12} />
-                            {label}
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            <Icon size={11} />
+                            <span className="sm:hidden leading-none">{shortLabel}</span>
+                            <span className="hidden sm:inline">{label}</span>
+                            <span className={`text-[9px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-full ${
                                 statusFilter === key ? 'bg-primary/30 text-primary' : 'bg-white/10 text-slate-500'
                             }`}>
                                 {count}
@@ -280,8 +299,18 @@ export default function EmployeeDashboard({ initialOrders, initialNotifications,
                     </button>
                 </div>
 
-                {/* ── Layout principal ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Dots de paginação — indica que pode arrastar */}
+                <div className="flex lg:hidden justify-center gap-1.5 -mt-2">
+                    <div className={`h-1 rounded-full transition-all duration-300 ${mobileTab === 'servicos'      ? 'w-5 bg-primary' : 'w-2 bg-white/15'}`} />
+                    <div className={`h-1 rounded-full transition-all duration-300 ${mobileTab === 'notificacoes'  ? 'w-5 bg-primary' : 'w-2 bg-white/15'}`} />
+                </div>
+
+                {/* ── Layout principal (swipeable no mobile) ── */}
+                <div
+                    className="grid grid-cols-1 lg:grid-cols-3 gap-5"
+                    onTouchStart={onSwipeStart}
+                    onTouchEnd={onSwipeEnd}
+                >
 
                     {/* ── Coluna de serviços (2/3) ── */}
                     <div className={`lg:col-span-2 space-y-3 ${mobileTab === 'notificacoes' ? 'hidden lg:block' : ''}`}>
@@ -301,10 +330,7 @@ export default function EmployeeDashboard({ initialOrders, initialNotifications,
                                 key={order.id}
                                 order={order}
                                 updatingId={updatingId}
-                                confirmingId={confirmingId}
                                 onAdvanceRequest={handleAdvanceRequest}
-                                onAdvanceConfirm={handleAdvanceConfirm}
-                                onCancelConfirm={() => setConfirmingId(null)}
                                 delay={idx * 40}
                             />
                         ))}
@@ -320,6 +346,54 @@ export default function EmployeeDashboard({ initialOrders, initialNotifications,
                         />
                     </div>
                 </div>
+
+                {/* ── Popup de confirmação de avanço de status ── */}
+                {confirmingId && (() => {
+                    const target = orders.find(o => o.id === confirmingId);
+                    if (!target) return null;
+                    const cfg = STATUS_CONFIG[target.status as EmployeeStatus];
+                    if (!cfg?.next) return null;
+                    const { NextIcon } = cfg;
+                    return (
+                        <>
+                            <div
+                                className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+                                onClick={() => setConfirmingId(null)}
+                            />
+                            <div className="fixed bottom-[4.5rem] left-4 right-4 z-[70] bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-2xl shadow-black/70 animate-fade-in-up">
+                                <div className="flex items-center gap-3 mb-5">
+                                    <div className={`h-11 w-11 rounded-xl ${cfg.bg} border ${cfg.border} flex items-center justify-center shrink-0`}>
+                                        {NextIcon && <NextIcon size={20} className={cfg.text} />}
+                                    </div>
+                                    <div>
+                                        <p className="text-base font-bold text-white">Confirmar avanço?</p>
+                                        <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+                                            {target.clientName} → <span className={cfg.text}>{cfg.nextLabel}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setConfirmingId(null)}
+                                        className="flex-1 h-12 rounded-xl border border-white/15 text-slate-300 font-semibold text-sm hover:bg-white/5 transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={() => handleAdvanceConfirm(target)}
+                                        disabled={!!updatingId}
+                                        className={`flex-1 h-12 rounded-xl border ${cfg.border} ${cfg.bg} ${cfg.text} font-bold text-sm hover:brightness-125 transition-all disabled:opacity-50 flex items-center justify-center gap-2`}
+                                    >
+                                        {updatingId
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : <>{NextIcon && <NextIcon size={15} />} Confirmar</>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    );
+                })()}
             </div>
         </div>
     );
@@ -327,22 +401,18 @@ export default function EmployeeDashboard({ initialOrders, initialNotifications,
 
 // ─── Card de serviço ──────────────────────────────────────────────────────────
 
-function OrderCard({ order, updatingId, confirmingId, onAdvanceRequest, onAdvanceConfirm, onCancelConfirm, delay }: {
+function OrderCard({ order, updatingId, onAdvanceRequest, delay }: {
     order: Order;
     updatingId: string | null;
-    confirmingId: string | null;
     onAdvanceRequest: (id: string) => void;
-    onAdvanceConfirm: (order: Order) => void;
-    onCancelConfirm: () => void;
     delay: number;
 }) {
     const cfg       = STATUS_CONFIG[order.status as EmployeeStatus];
     if (!cfg) return null;
 
-    const dl        = deadlineInfo(order.deliveryDate ?? null);
-    const isUpdating    = updatingId  === order.id;
-    const isConfirming  = confirmingId === order.id;
-    const shortId   = order.id.slice(0, 8).toUpperCase();
+    const dl         = deadlineInfo(order.deliveryDate ?? null);
+    const isUpdating = updatingId === order.id;
+    const shortId    = order.id.slice(0, 8).toUpperCase();
     const { NextIcon } = cfg;
 
     return (
@@ -413,56 +483,31 @@ function OrderCard({ order, updatingId, confirmingId, onAdvanceRequest, onAdvanc
                     </div>
                 )}
 
-                {/* Ações */}
-                <div className="flex flex-col sm:flex-row gap-2">
+                {/* Ações — dois botões sempre visíveis, mesma altura */}
+                <div className="flex flex-col gap-2">
                     <Link
                         href={`/admin/orders/${order.id}`}
-                        className="h-10 px-4 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                        className="h-12 w-full px-4 flex items-center justify-center gap-1.5 rounded-xl border border-white/15 text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/8 transition-colors"
                     >
                         Ver detalhes
-                        <ChevronRight size={12} className="opacity-60" />
+                        <ChevronRight size={13} className="opacity-50" />
                     </Link>
 
-                    {cfg.next && !isConfirming && (
+                    {cfg.next ? (
                         <button
                             onClick={() => onAdvanceRequest(order.id)}
                             disabled={isUpdating || !!updatingId}
-                            className={`h-10 flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs transition-all disabled:opacity-40 disabled:cursor-not-allowed border ${cfg.border} ${cfg.text} ${cfg.bg} hover:brightness-125`}
+                            className={`h-12 w-full flex items-center justify-center gap-2 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed border ${cfg.border} ${cfg.text} ${cfg.bg} hover:brightness-125`}
                         >
                             {isUpdating
-                                ? <Loader2 size={13} className="animate-spin" />
-                                : NextIcon && <NextIcon size={13} />
+                                ? <Loader2 size={15} className="animate-spin" />
+                                : NextIcon && <NextIcon size={15} />
                             }
                             {cfg.nextLabel}
                         </button>
-                    )}
-
-                    {/* Confirmação inline — evita avanço acidental */}
-                    {cfg.next && isConfirming && (
-                        <div className="flex-1 flex items-center gap-2 p-1.5 rounded-xl border border-amber-500/30 bg-amber-500/8 animate-fade-in">
-                            <span className="text-[11px] text-amber-300/80 font-medium px-2 flex-1">
-                                Confirmar avanço?
-                            </span>
-                            <button
-                                onClick={() => onAdvanceConfirm(order)}
-                                disabled={isUpdating}
-                                className="h-7 px-3 flex items-center gap-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                            >
-                                <Check size={12} />
-                                Sim
-                            </button>
-                            <button
-                                onClick={onCancelConfirm}
-                                className="h-7 w-7 flex items-center justify-center rounded-lg border border-white/10 text-slate-500 hover:text-white hover:bg-white/5 transition-colors"
-                            >
-                                <X size={12} />
-                            </button>
-                        </div>
-                    )}
-
-                    {!cfg.next && (
-                        <div className="h-10 flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/8 text-xs font-bold text-cyan-400">
-                            <CheckCircle2 size={13} />
+                    ) : (
+                        <div className="h-12 w-full flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/8 text-sm font-bold text-cyan-400">
+                            <CheckCircle2 size={14} />
                             Aguardando retirada
                         </div>
                     )}

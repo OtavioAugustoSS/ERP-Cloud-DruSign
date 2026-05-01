@@ -29,7 +29,7 @@ export default function AdminLayout({
     return (
         <div className="flex h-screen overflow-hidden bg-background-dark text-white font-display antialiased selection:bg-primary selection:text-white">
             <AdminSidebar />
-            <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-background-dark">
+            <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-background-dark pb-16 lg:pb-0">
                 {children}
             </main>
         </div>

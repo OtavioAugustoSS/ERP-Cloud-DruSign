@@ -1,21 +1,13 @@
 'use server'
 
 import prisma from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { requireUser, requireAdmin } from '@/lib/auth/session';
 import { audit } from '@/lib/auth/audit';
 import type { Client, CreateClientInput, UpdateClientInput } from '@/types';
 
-// Tipo interno que inclui campos novos + _count (Prisma ainda não os tipou — remover após prisma generate)
-type RawClient = {
-    id: string; name: string; email: string | null; phone: string | null;
-    document: string | null; createdAt: Date; updatedAt: Date;
-    ie?: string | null; zip?: string | null; street?: string | null;
-    number?: string | null; neighborhood?: string | null;
-    city?: string | null; state?: string | null; notes?: string | null;
-    nickname?: string | null; contact?: string | null; phone2?: string | null;
-    _count?: { order?: number; orders?: number };
-};
+type RawClient = Prisma.clientGetPayload<{ include: { _count: { select: { order: true } } } }>;
 
 function toClient(c: RawClient): Client {
     return {
@@ -35,7 +27,7 @@ function toClient(c: RawClient): Client {
         contact:      c.contact ?? null,
         phone2:       c.phone2 ?? null,
         notes:        c.notes ?? null,
-        orderCount:   c._count?.order ?? c._count?.orders ?? 0,
+        orderCount:   c._count.order,
         createdAt:    c.createdAt,
         updatedAt:    c.updatedAt,
     };
@@ -78,6 +70,7 @@ export async function createClient(
                 notes:        input.notes?.trim()        || null,
                 updatedAt:    new Date(),
             },
+            include: { _count: { select: { order: true } } },
         });
         await audit({ action: 'CLIENT_CREATED', targetId: row.id, details: { name: row.name } });
         return { success: true, client: toClient(row) };

@@ -201,22 +201,22 @@ export default function ClientList({ initialClients }: ClientListProps) {
             )}
 
             {/* ── HEADER ── */}
-            <header className="flex-none px-8 py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
+            <header className="flex-none px-4 sm:px-8 py-4 sm:py-5 border-b border-white/5 bg-background-dark/50 backdrop-blur-sm z-10">
 
                 {/* Linha 1 */}
-                <div className="flex items-center justify-between gap-4 animate-fade-in-up">
+                <div className="flex items-center justify-between gap-3 animate-fade-in-up">
                     <div>
-                        <h2 className="text-white text-2xl font-bold leading-tight tracking-tight">Clientes</h2>
-                        <p className="text-slate-500 text-xs mt-0.5">Cadastro de clientes e suas informações.</p>
+                        <h2 className="text-white text-xl sm:text-2xl font-bold leading-tight tracking-tight">Clientes</h2>
+                        <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">Cadastro de clientes e suas informações.</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={openCreate}
-                            className="group/newbtn relative flex items-center gap-2 h-9 pl-3.5 pr-4 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold text-xs overflow-hidden hover:border-primary/40 transition-colors shadow-[0_0_12px_rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
+                            className="group/newbtn relative flex items-center gap-2 h-9 px-3 sm:pl-3.5 sm:pr-4 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold text-xs overflow-hidden hover:border-primary/40 transition-colors shadow-[0_0_12px_rgba(34,211,238,0.06)] hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
                         >
                             <span className="absolute inset-0 bg-primary -translate-x-full group-hover/newbtn:translate-x-0 transition-transform duration-300 ease-out rounded-full" />
                             <Plus size={15} className="relative z-10 group-hover/newbtn:text-background-dark transition-colors duration-300" />
-                            <span className="relative z-10 group-hover/newbtn:text-background-dark transition-colors duration-300">Novo Cliente</span>
+                            <span className="relative z-10 group-hover/newbtn:text-background-dark transition-colors duration-300 hidden sm:inline">Novo Cliente</span>
                         </button>
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export default function ClientList({ initialClients }: ClientListProps) {
             </header>
 
             {/* ── TABELA ── */}
-            <div className="flex-1 overflow-auto p-6 pt-4">
+            <div className="flex-1 overflow-auto p-4 sm:p-6 pt-4">
                 <div className="w-full rounded-2xl border border-white/10 bg-surface-dark/50 overflow-hidden shadow-2xl animate-fade-in-up animate-delay-200">
                     {filtered.length === 0 ? (
                         <div className="py-16 flex flex-col items-center gap-3 text-slate-500">
@@ -364,133 +364,184 @@ export default function ClientList({ initialClients }: ClientListProps) {
                             )}
                         </div>
                     ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/10 bg-black/20 text-slate-500 text-[11px] uppercase tracking-widest font-semibold">
-                                    <th className="p-3 pl-6">Cliente</th>
-                                    <th className="p-3">Contato</th>
-                                    <th className="p-3">Localização</th>
-                                    <th className="p-3 w-28 text-center">Pedidos</th>
-                                    <th className="p-3 w-28">Cadastro</th>
-                                    <th className="p-3 pr-6 w-24 text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/[0.04] text-sm">
+                        <>
+                            {/* Mobile: lista de cards */}
+                            <div className="sm:hidden divide-y divide-white/[0.04]">
                                 {paginatedClients.map(c => {
                                     const hasOrders = (c.orderCount ?? 0) > 0;
                                     const location = [c.city, c.state].filter(Boolean).join(' · ');
                                     return (
-                                        <tr key={c.id} className="group hover:bg-white/[0.04] transition-all cursor-default border-l-2 border-l-transparent hover:border-l-primary/30">
-
-                                            {/* Avatar + Nome + Documento */}
-                                            <td className="p-3 pl-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(c.name)} flex items-center justify-center text-xs font-bold text-white shrink-0 select-none`}>
-                                                        {initials(c.name)}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-white font-medium text-sm leading-tight truncate">{c.name}</p>
-                                                        {c.document && (
-                                                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">{c.document}</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Contato */}
-                                            <td className="p-3">
-                                                <div className="flex flex-col gap-0.5">
-                                                    {c.phone ? (
-                                                        <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                                                            <Phone size={10} className="text-slate-600 shrink-0" />
-                                                            {c.phone}
+                                        <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                                            <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(c.name)} flex items-center justify-center text-xs font-bold text-white shrink-0 select-none`}>
+                                                {initials(c.name)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-white font-medium text-sm truncate">{c.name}</p>
+                                                    {hasOrders && (
+                                                        <span className="shrink-0 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold tabular-nums">
+                                                            {c.orderCount}
                                                         </span>
-                                                    ) : null}
-                                                    {c.email ? (
-                                                        <span className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate max-w-[220px]">
-                                                            <Mail size={10} className="text-slate-600 shrink-0" />
-                                                            {c.email}
-                                                        </span>
-                                                    ) : null}
-                                                    {!c.phone && !c.email && (
-                                                        <span className="text-[10px] text-slate-700 font-mono">—</span>
                                                     )}
                                                 </div>
-                                            </td>
-
-                                            {/* Localização */}
-                                            <td className="p-3">
-                                                {location ? (
-                                                    <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                                                        <MapPin size={10} className="text-slate-600 shrink-0" />
-                                                        {location}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] text-slate-700 font-mono">—</span>
-                                                )}
-                                            </td>
-
-                                            {/* Pedidos */}
-                                            <td className="p-3 text-center">
-                                                {hasOrders ? (
-                                                    <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold tabular-nums">
-                                                        {c.orderCount}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] text-slate-700 font-mono">—</span>
-                                                )}
-                                            </td>
-
-                                            {/* Cadastro */}
-                                            <td className="p-3">
-                                                <span className="text-[10px] text-slate-600 font-mono">
-                                                    {new Date(c.createdAt).toLocaleDateString('pt-BR')}
-                                                </span>
-                                            </td>
-
-                                            {/* Ações */}
-                                            <td className="p-3 pr-6 text-right">
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {c.phone && <span className="text-[11px] text-slate-500 truncate">{c.phone}</span>}
+                                                    {location && <span className="text-[11px] text-slate-600 truncate">{location}</span>}
+                                                    {!c.phone && !location && <span className="text-[11px] text-slate-700 font-mono">—</span>}
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0 flex items-center gap-1">
                                                 {confirmDelete === c.id ? (
-                                                    <div className="flex items-center justify-end gap-1.5 animate-fade-in">
+                                                    <>
                                                         <button
                                                             onClick={() => handleDelete(c)}
                                                             disabled={isPending}
-                                                            className="text-xs px-2.5 py-1 bg-red-500/15 text-red-400 border border-red-500/25 rounded-lg hover:bg-red-500/25 transition-colors font-medium disabled:opacity-50"
+                                                            className="text-[11px] px-2.5 py-1.5 bg-red-500/15 text-red-400 border border-red-500/25 rounded-lg hover:bg-red-500/25 transition-colors font-medium disabled:opacity-50"
                                                         >
-                                                            {hasOrders ? `Excluir (${c.orderCount} pedido${(c.orderCount ?? 0) > 1 ? 's' : ''})` : 'Confirmar'}
+                                                            Excluir
                                                         </button>
-                                                        <button
-                                                            onClick={() => setConfirmDelete(null)}
-                                                            className="text-slate-500 hover:text-white transition-colors p-1"
-                                                            title="Cancelar"
-                                                        >
+                                                        <button onClick={() => setConfirmDelete(null)} className="text-slate-500 p-1">
                                                             <X size={13} />
                                                         </button>
-                                                    </div>
+                                                    </>
                                                 ) : (
-                                                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <>
                                                         <button
                                                             onClick={() => openEdit(c)}
-                                                            className="h-7 w-7 flex items-center justify-center rounded-full text-slate-500 hover:text-primary hover:bg-primary/10 transition-colors"
-                                                            title="Editar cliente"
+                                                            className="h-8 w-8 flex items-center justify-center rounded-full text-slate-500 hover:text-primary hover:bg-primary/10 transition-colors"
                                                         >
                                                             <Pencil size={13} />
                                                         </button>
                                                         <button
                                                             onClick={() => setConfirmDelete(c.id)}
-                                                            className="h-7 w-7 flex items-center justify-center rounded-full text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                                                            title="Excluir cliente"
+                                                            className="h-8 w-8 flex items-center justify-center rounded-full text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
                                                         >
                                                             <Trash2 size={13} />
                                                         </button>
-                                                    </div>
+                                                    </>
                                                 )}
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </div>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </div>
+
+                            {/* Desktop: tabela */}
+                            <table className="hidden sm:table w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/10 bg-black/20 text-slate-500 text-[11px] uppercase tracking-widest font-semibold">
+                                        <th className="p-3 pl-6">Cliente</th>
+                                        <th className="p-3">Contato</th>
+                                        <th className="p-3">Localização</th>
+                                        <th className="p-3 w-28 text-center">Pedidos</th>
+                                        <th className="p-3 w-28">Cadastro</th>
+                                        <th className="p-3 pr-6 w-24 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/[0.04] text-sm">
+                                    {paginatedClients.map(c => {
+                                        const hasOrders = (c.orderCount ?? 0) > 0;
+                                        const location = [c.city, c.state].filter(Boolean).join(' · ');
+                                        return (
+                                            <tr key={c.id} className="group hover:bg-white/[0.04] transition-all cursor-default border-l-2 border-l-transparent hover:border-l-primary/30">
+                                                <td className="p-3 pl-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`h-9 w-9 rounded-full bg-gradient-to-br ${avatarGradient(c.name)} flex items-center justify-center text-xs font-bold text-white shrink-0 select-none`}>
+                                                            {initials(c.name)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-white font-medium text-sm leading-tight truncate">{c.name}</p>
+                                                            {c.document && (
+                                                                <p className="text-[10px] text-slate-600 font-mono mt-0.5">{c.document}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-3">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        {c.phone ? (
+                                                            <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                                                <Phone size={10} className="text-slate-600 shrink-0" />
+                                                                {c.phone}
+                                                            </span>
+                                                        ) : null}
+                                                        {c.email ? (
+                                                            <span className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate max-w-[220px]">
+                                                                <Mail size={10} className="text-slate-600 shrink-0" />
+                                                                {c.email}
+                                                            </span>
+                                                        ) : null}
+                                                        {!c.phone && !c.email && (
+                                                            <span className="text-[10px] text-slate-700 font-mono">—</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="p-3">
+                                                    {location ? (
+                                                        <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                                                            <MapPin size={10} className="text-slate-600 shrink-0" />
+                                                            {location}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-700 font-mono">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-center">
+                                                    {hasOrders ? (
+                                                        <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold tabular-nums">
+                                                            {c.orderCount}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-700 font-mono">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className="text-[10px] text-slate-600 font-mono">
+                                                        {new Date(c.createdAt).toLocaleDateString('pt-BR')}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 pr-6 text-right">
+                                                    {confirmDelete === c.id ? (
+                                                        <div className="flex items-center justify-end gap-1.5 animate-fade-in">
+                                                            <button
+                                                                onClick={() => handleDelete(c)}
+                                                                disabled={isPending}
+                                                                className="text-xs px-2.5 py-1 bg-red-500/15 text-red-400 border border-red-500/25 rounded-lg hover:bg-red-500/25 transition-colors font-medium disabled:opacity-50"
+                                                            >
+                                                                {hasOrders ? `Excluir (${c.orderCount} pedido${(c.orderCount ?? 0) > 1 ? 's' : ''})` : 'Confirmar'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDelete(null)}
+                                                                className="text-slate-500 hover:text-white transition-colors p-1"
+                                                            >
+                                                                <X size={13} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => openEdit(c)}
+                                                                className="h-7 w-7 flex items-center justify-center rounded-full text-slate-500 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                                title="Editar cliente"
+                                                            >
+                                                                <Pencil size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirmDelete(c.id)}
+                                                                className="h-7 w-7 flex items-center justify-center rounded-full text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                                                                title="Excluir cliente"
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </>
                     )}
                 </div>
 
